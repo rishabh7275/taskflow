@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   Box,
   Button,
@@ -54,6 +55,7 @@ export default function Layout({ children }: { children?: ReactNode }) {
 
   const location = useLocation();
   const navigate = useNavigate();
+  const shouldReduceMotion = useReducedMotion();
 
   const query = useTaskStore((s) => s.query);
   const setQuery = useTaskStore((s) => s.setQuery);
@@ -371,7 +373,20 @@ export default function Layout({ children }: { children?: ReactNode }) {
           onToggleNav={handleDrawerToggle}
         />
 
-        <Box sx={{ flexGrow: 1 }}>{children ?? <Outlet />}</Box>
+        <Box sx={{ flexGrow: 1, position: "relative" }}>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={location.pathname}
+              initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={shouldReduceMotion ? undefined : { opacity: 0, y: -8 }}
+              transition={{ duration: shouldReduceMotion ? 0 : 0.18, ease: "easeInOut" }}
+              style={{ width: "100%", height: "100%" }}
+            >
+              {children ?? <Outlet />}
+            </motion.div>
+          </AnimatePresence>
+        </Box>
 
         <TaskDialog
           open={dialog.open}

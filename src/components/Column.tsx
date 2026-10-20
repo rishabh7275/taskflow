@@ -2,6 +2,7 @@ import { Box, IconButton, Stack, Typography, alpha } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { AnimatePresence } from "framer-motion";
 import type { Status, Task } from "../types";
 import { STATUS_META } from "../utils";
 import TaskCard from "./TaskCard";
@@ -82,15 +83,17 @@ export default function Column({
 
       <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
         <Stack spacing={1.5} sx={{ minHeight: 80 }}>
-          {tasks.map((task) => (
-            <TaskCard
-              key={task.id}
-              task={task}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              onMove={onMove}
-            />
-          ))}
+          <AnimatePresence initial={false}>
+            {tasks.map((task) => (
+              <TaskCard
+                key={task.id}
+                task={task}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                onMove={onMove}
+              />
+            ))}
+          </AnimatePresence>
         </Stack>
       </SortableContext>
 

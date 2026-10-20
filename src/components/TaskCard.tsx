@@ -1,4 +1,5 @@
 import { useState, type MouseEvent, type ReactNode } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import {
   Box,
   Card,
@@ -45,6 +46,8 @@ interface Props {
 export default function TaskCard({ task, onEdit, onDelete, onMove, isOverlay = false }: Props) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const [showSubtasks, setShowSubtasks] = useState(false);
+
+  const shouldReduceMotion = useReducedMotion();
 
   const selectedTaskIds = useTaskStore((s) => s.selectedTaskIds);
   const toggleSelectTask = useTaskStore((s) => s.toggleSelectTask);
@@ -123,7 +126,7 @@ export default function TaskCard({ task, onEdit, onDelete, onMove, isOverlay = f
     </MenuItem>,
   ];
 
-  return (
+  const cardContent = (
     <Card
       ref={setNodeRef}
       style={style}
@@ -343,5 +346,24 @@ export default function TaskCard({ task, onEdit, onDelete, onMove, isOverlay = f
         {menuItems}
       </Menu>
     </Card>
+  );
+
+  if (isOverlay) {
+    return cardContent;
+  }
+
+  return (
+    <motion.div
+      initial={shouldReduceMotion ? false : { opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={
+        shouldReduceMotion || isDragging
+          ? undefined
+          : { opacity: 0, y: -12, transition: { duration: 0.15 } }
+      }
+      transition={{ duration: shouldReduceMotion ? 0 : 0.2, ease: "easeOut" }}
+    >
+      {cardContent}
+    </motion.div>
   );
 }
