@@ -1,9 +1,10 @@
 import { createTheme, type PaletteMode } from "@mui/material";
 import type { AccentColor, Density } from "../types";
 
-const bodyFont = '"DM Sans Variable", system-ui, -apple-system, sans-serif';
+const bodyFont =
+  '"DM Sans Variable", "Noto Sans Devanagari", system-ui, -apple-system, sans-serif';
 const headingFont =
-  '"Bricolage Grotesque Variable", "DM Sans Variable", system-ui, sans-serif';
+  '"Bricolage Grotesque Variable", "Noto Sans Devanagari", "DM Sans Variable", system-ui, sans-serif';
 const heading = { fontFamily: headingFont, fontWeight: 700, letterSpacing: "-0.02em" };
 
 export const ACCENT_COLORS: { name: string; value: AccentColor }[] = [

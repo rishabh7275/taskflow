@@ -32,6 +32,7 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import Header from "./Header";
 import TaskDialog from "./TaskDialog";
 import CommandPalette from "./CommandPalette";
+import { useTranslation } from "react-i18next";
 import ShortcutsDialog from "./ShortcutsDialog";
 import BoardModal from "./BoardModal";
 import { useTaskStore } from "../store";
@@ -39,13 +40,15 @@ import type { Board } from "../types";
 
 const SIDEBAR_WIDTH = 260;
 
-const NAV_ITEMS = [
-  { label: "Board", path: "/board", icon: DashboardIcon },
-  { label: "Analytics", path: "/analytics", icon: BarChartIcon },
-  { label: "Settings", path: "/settings", icon: SettingsIcon },
-];
-
 export default function Layout({ children }: { children?: ReactNode }) {
+  const { t } = useTranslation();
+
+  const navItems = [
+    { label: t("nav.board"), path: "/board", icon: DashboardIcon },
+    { label: t("nav.analytics"), path: "/analytics", icon: BarChartIcon },
+    { label: t("nav.settings"), path: "/settings", icon: SettingsIcon },
+  ];
+
   const [mobileOpen, setMobileOpen] = useState(false);
   const [boardModal, setBoardModal] = useState<{ open: boolean; board: Board | null }>({
     open: false,
@@ -150,10 +153,10 @@ export default function Layout({ children }: { children?: ReactNode }) {
         </Box>
         <Box>
           <Typography variant="subtitle1" fontWeight={700} sx={{ lineHeight: 1.1 }}>
-            TaskFlow
+            {t("common.appName")}
           </Typography>
           <Typography variant="caption" color="text.secondary">
-            Workspace
+            {t("common.workspace")}
           </Typography>
         </Box>
       </Box>
@@ -162,7 +165,7 @@ export default function Layout({ children }: { children?: ReactNode }) {
 
       {/* Primary Navigation */}
       <List sx={{ px: 1.5, py: 1.5 }}>
-        {NAV_ITEMS.map((item) => {
+        {navItems.map((item) => {
           const Icon = item.icon;
           const active = location.pathname === item.path;
           return (
@@ -214,13 +217,13 @@ export default function Layout({ children }: { children?: ReactNode }) {
       {/* Boards Section */}
       <Box sx={{ px: 2, pt: 2, pb: 1, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: "0.05em" }}>
-          Boards
+          {t("boards.title")}
         </Typography>
-        <Tooltip title="Create new board">
+        <Tooltip title={t("boards.create")}>
           <IconButton
             size="small"
             onClick={() => setBoardModal({ open: true, board: null })}
-            aria-label="Create new board"
+            aria-label={t("boards.create")}
           >
             <AddIcon fontSize="small" />
           </IconButton>
@@ -242,7 +245,7 @@ export default function Layout({ children }: { children?: ReactNode }) {
                     e.stopPropagation();
                     setMenuAnchor({ element: e.currentTarget, board: b });
                   }}
-                  aria-label={`Options for ${b.name}`}
+                  aria-label={t("boards.optionsFor", { name: b.name })}
                   sx={{ opacity: active ? 1 : 0.6 }}
                 >
                   <MoreVertIcon fontSize="small" />
@@ -302,7 +305,7 @@ export default function Layout({ children }: { children?: ReactNode }) {
             borderRadius: 2,
           }}
         >
-          Shortcuts (?)
+          {t("nav.shortcuts")}
         </Button>
       </Box>
     </Box>
@@ -423,7 +426,7 @@ export default function Layout({ children }: { children?: ReactNode }) {
             <ListItemIcon>
               <EditIcon fontSize="small" />
             </ListItemIcon>
-            <ListItemText>Rename</ListItemText>
+            <ListItemText>{t("boards.rename")}</ListItemText>
           </MenuItem>
           <MenuItem
             disabled={boards.length <= 1}
@@ -438,7 +441,7 @@ export default function Layout({ children }: { children?: ReactNode }) {
             <ListItemIcon sx={{ color: "inherit" }}>
               <DeleteIcon fontSize="small" />
             </ListItemIcon>
-            <ListItemText>Delete</ListItemText>
+            <ListItemText>{t("boards.delete")}</ListItemText>
           </MenuItem>
         </Menu>
 
@@ -457,7 +460,7 @@ export default function Layout({ children }: { children?: ReactNode }) {
                   setToast(null);
                 }}
               >
-                Undo
+                {t("task.undo")}
               </Button>
             ) : toast?.redo ? (
               <Button
@@ -468,7 +471,7 @@ export default function Layout({ children }: { children?: ReactNode }) {
                   setToast(null);
                 }}
               >
-                Redo
+                {t("task.redo")}
               </Button>
             ) : undefined
           }

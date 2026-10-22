@@ -49,8 +49,8 @@ export const addDays = (days: number) => {
   return toISO(d);
 };
 
-export const formatDue = (iso: string) =>
-  new Date(`${iso}T00:00:00`).toLocaleDateString("en-IN", {
+export const formatDue = (iso: string, locale: string = "en-IN") =>
+  new Date(`${iso}T00:00:00`).toLocaleDateString(locale, {
     day: "numeric",
     month: "short",
   });

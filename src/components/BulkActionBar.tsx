@@ -1,4 +1,5 @@
 import { useState, type MouseEvent } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Box,
   Button,
@@ -18,10 +19,11 @@ import FlagIcon from "@mui/icons-material/FlagOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import CloseIcon from "@mui/icons-material/Close";
 import { useTaskStore } from "../store";
-import { PRIORITIES, PRIORITY_META, STATUSES, STATUS_META } from "../utils";
+import { PRIORITIES, PRIORITY_META, STATUSES } from "../utils";
 import type { Priority, Status } from "../types";
 
 export default function BulkActionBar() {
+  const { t } = useTranslation();
   const selectedTaskIds = useTaskStore((s) => s.selectedTaskIds);
   const clearSelection = useTaskStore((s) => s.clearSelection);
   const bulkMove = useTaskStore((s) => s.bulkMove);
@@ -82,7 +84,7 @@ export default function BulkActionBar() {
             sx={{ fontWeight: 700 }}
           />
           <Typography variant="body2" fontWeight={600}>
-            selected
+            {t("bulk.selected")}
           </Typography>
         </Stack>
 
@@ -95,7 +97,7 @@ export default function BulkActionBar() {
           startIcon={<ArrowForwardIcon fontSize="small" />}
           onClick={openMoveMenu}
         >
-          Move to
+          {t("bulk.moveTo")}
         </Button>
         <Menu anchorEl={moveAnchor} open={Boolean(moveAnchor)} onClose={closeMoveMenu}>
           {STATUSES.map((s) => (
@@ -103,7 +105,9 @@ export default function BulkActionBar() {
               <ListItemIcon>
                 <ArrowForwardIcon fontSize="small" />
               </ListItemIcon>
-              <ListItemText>Move to {STATUS_META[s].label}</ListItemText>
+              <ListItemText>
+                {t("bulk.moveToStatus", { status: t(`status.${s}`) })}
+              </ListItemText>
             </MenuItem>
           ))}
         </Menu>
@@ -115,13 +119,13 @@ export default function BulkActionBar() {
           startIcon={<FlagIcon fontSize="small" />}
           onClick={openPriorityMenu}
         >
-          Priority
+          {t("bulk.priority")}
         </Button>
         <Menu anchorEl={priorityAnchor} open={Boolean(priorityAnchor)} onClose={closePriorityMenu}>
           {PRIORITIES.map((p) => (
             <MenuItem key={p} onClick={() => handleBulkPriority(p)}>
               <ListItemText sx={{ color: PRIORITY_META[p].color, fontWeight: 600 }}>
-                {PRIORITY_META[p].label}
+                {t(`priority.${p}`)}
               </ListItemText>
             </MenuItem>
           ))}
@@ -135,11 +139,11 @@ export default function BulkActionBar() {
           startIcon={<DeleteOutlineIcon fontSize="small" />}
           onClick={bulkDelete}
         >
-          Delete
+          {t("common.delete")}
         </Button>
 
         {/* Clear selection */}
-        <IconButton size="small" onClick={clearSelection} aria-label="Clear selection">
+        <IconButton size="small" onClick={clearSelection} aria-label={t("bulk.clearSelection")}>
           <CloseIcon fontSize="small" />
         </IconButton>
       </Paper>

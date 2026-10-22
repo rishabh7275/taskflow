@@ -2,6 +2,7 @@ import { Component, type ErrorInfo, type ReactNode } from "react";
 import { Box, Button, Container, Paper, Typography } from "@mui/material";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import i18n from "../lib/i18n";
 
 interface Props {
   children: ReactNode;
@@ -74,11 +75,10 @@ export class ErrorBoundary extends Component<Props, State> {
               <ErrorOutlineIcon sx={{ fontSize: 32 }} />
             </Box>
             <Typography variant="h5" component="h1" fontWeight={700}>
-              Something went wrong
+              {i18n.t("errorBoundary.title")}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              {this.state.error?.message ||
-                "An unexpected application error occurred. You can return to the board to continue working."}
+              {this.state.error?.message || i18n.t("errorBoundary.subtitle")}
             </Typography>
             <Button
               variant="contained"
@@ -86,7 +86,7 @@ export class ErrorBoundary extends Component<Props, State> {
               onClick={this.handleReset}
               sx={{ mt: 1 }}
             >
-              Return to board
+              {i18n.t("errorBoundary.returnToBoard")}
             </Button>
           </Paper>
         </Container>

@@ -1,5 +1,6 @@
 import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+console.log("API key loaded:", Boolean(import.meta.env.VITE_FIREBASE_API_KEY));
+import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const app = initializeApp({

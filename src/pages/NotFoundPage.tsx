@@ -1,9 +1,12 @@
+import { useTranslation } from "react-i18next";
 import { Box, Button, Container, Paper, Typography } from "@mui/material";
 import SearchOffIcon from "@mui/icons-material/SearchOffOutlined";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { Link as RouterLink } from "react-router-dom";
 
 export default function NotFoundPage() {
+  const { t } = useTranslation();
+
   return (
     <Container
       maxWidth="sm"
@@ -32,7 +35,7 @@ export default function NotFoundPage() {
             width: 64,
             height: 64,
             borderRadius: "50%",
-            bgcolor: (t) => t.palette.mode === "light" ? "grey.100" : "grey.800",
+            bgcolor: (theme) => theme.palette.mode === "light" ? "grey.100" : "grey.800",
             color: "text.secondary",
             display: "grid",
             placeItems: "center",
@@ -41,10 +44,10 @@ export default function NotFoundPage() {
           <SearchOffIcon sx={{ fontSize: 36 }} />
         </Box>
         <Typography variant="h4" component="h1" fontWeight={700}>
-          404 - Page not found
+          {t("notFound.title")}
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          The page you are looking for doesn't exist, has been moved, or is temporarily unavailable.
+          {t("notFound.subtitle")}
         </Typography>
         <Button
           component={RouterLink}
@@ -53,7 +56,7 @@ export default function NotFoundPage() {
           startIcon={<ArrowBackIcon />}
           sx={{ mt: 1 }}
         >
-          Back to board
+          {t("notFound.backToBoard")}
         </Button>
       </Paper>
     </Container>

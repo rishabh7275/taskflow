@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import {
   Box,
   Button,
@@ -27,38 +29,51 @@ import { useForm, Controller, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import type { Label, Status, Task, TaskInput } from "../types";
-import { PRIORITIES, PRIORITY_META, STATUSES, STATUS_META } from "../utils";
+import { PRIORITIES, STATUSES } from "../utils";
 import { useTaskStore } from "../store";
 
-const labelSchema = z.object({
-  id: z.string(),
-  name: z.string().min(1, "Label name required"),
-  color: z.string(),
-});
+const createLabelSchema = (t: TFunction) =>
+  z.object({
+    id: z.string(),
+    name: z.string().min(1, t("validation.labelRequired")),
+    color: z.string(),
+  });
 
-const subtaskSchema = z.object({
-  id: z.string(),
-  title: z.string().trim().min(1, "Subtask title cannot be empty"),
-  completed: z.boolean(),
-});
+const createSubtaskSchema = (t: TFunction) =>
+  z.object({
+    id: z.string(),
+    title: z.string().trim().min(1, t("validation.subtaskRequired")),
+    completed: z.boolean(),
+  });
 
-const taskFormSchema = z.object({
-  title: z
-    .string()
-    .trim()
-    .min(1, "Title is required")
-    .max(120, "Title must be 120 characters or fewer"),
-  description: z.string().default(""),
-  status: z.enum(["todo", "doing", "done"]),
-  priority: z.enum(["low", "medium", "high"]),
-  dueDate: z.string().nullable().optional(),
-  estimatedTime: z.string().optional(),
-  notes: z.string().optional(),
-  labels: z.array(labelSchema).default([]),
-  subtasks: z.array(subtaskSchema).default([]),
-});
+const createTaskFormSchema = (t: TFunction) =>
+  z.object({
+    title: z
+      .string()
+      .trim()
+      .min(1, t("validation.titleRequired"))
+      .max(120, t("validation.titleMaxLength")),
+    description: z.string().default(""),
+    status: z.enum(["todo", "doing", "done"]),
+    priority: z.enum(["low", "medium", "high"]),
+    dueDate: z.string().nullable().optional(),
+    estimatedTime: z.string().optional(),
+    notes: z.string().optional(),
+    labels: z.array(createLabelSchema(t)).default([]),
+    subtasks: z.array(createSubtaskSchema(t)).default([]),
+  });
 
-type TaskFormData = z.infer<typeof taskFormSchema>;
+type TaskFormData = {
+  title: string;
+  description: string;
+  status: "todo" | "doing" | "done";
+  priority: "low" | "medium" | "high";
+  dueDate?: string | null;
+  estimatedTime?: string;
+  notes?: string;
+  labels: Label[];
+  subtasks: { id: string; title: string; completed: boolean }[];
+};
 
 interface Props {
   open: boolean;
@@ -79,6 +94,7 @@ const PRESET_COLORS = [
 ];
 
 export default function TaskDialog({ open, task, defaultStatus, onClose, onSave }: Props) {
+  const { t } = useTranslation();
   const availableLabels = useTaskStore((s) => s.availableLabels);
   const addCustomLabel = useTaskStore((s) => s.addCustomLabel);
 
@@ -86,6 +102,8 @@ export default function TaskDialog({ open, task, defaultStatus, onClose, onSave 
   const [showNewLabelForm, setShowNewLabelForm] = useState(false);
   const [newLabelName, setNewLabelName] = useState("");
   const [newLabelColor, setNewLabelColor] = useState(PRESET_COLORS[0]);
+
+  const taskFormSchema = useMemo(() => createTaskFormSchema(t), [t]);
 
   const {
     control,
@@ -197,7 +215,7 @@ export default function TaskDialog({ open, task, defaultStatus, onClose, onSave 
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
       <form onSubmit={handleSubmit(onSubmit)} noValidate>
         <DialogTitle sx={{ pb: 1, fontWeight: 700 }}>
-          {task ? "Edit task" : "New task"}
+          {task ? t("task.editTask") : t("task.newTask")}
         </DialogTitle>
         <DialogContent dividers sx={{ maxHeight: "75vh" }}>
           <Stack spacing={3} sx={{ pt: 1 }}>
@@ -211,8 +229,8 @@ export default function TaskDialog({ open, task, defaultStatus, onClose, onSave 
                   autoFocus
                   required
                   fullWidth
-                  label="Title"
-                  placeholder="What needs to be done?"
+                  label={t("task.title")}
+                  placeholder={t("task.titlePlaceholder")}
                   error={Boolean(errors.title)}
                   helperText={errors.title?.message ?? " "}
                   sx={{ "& .MuiFormHelperText-root": { mt: 0.5 } }}
@@ -231,8 +249,8 @@ export default function TaskDialog({ open, task, defaultStatus, onClose, onSave 
                   multiline
                   minRows={2}
                   maxRows={4}
-                  label="Description"
-                  placeholder="Add details, background, or context..."
+                  label={t("task.description")}
+                  placeholder={t("task.descPlaceholder")}
                 />
               )}
             />
@@ -243,10 +261,10 @@ export default function TaskDialog({ open, task, defaultStatus, onClose, onSave 
                 name="status"
                 control={control}
                 render={({ field }) => (
-                  <TextField select fullWidth label="Status" {...field}>
+                  <TextField select fullWidth label={t("task.status")} {...field}>
                     {STATUSES.map((s) => (
                       <MenuItem key={s} value={s}>
-                        {STATUS_META[s].label}
+                        {t(`status.${s}`)}
                       </MenuItem>
                     ))}
                   </TextField>
@@ -257,10 +275,10 @@ export default function TaskDialog({ open, task, defaultStatus, onClose, onSave 
                 name="priority"
                 control={control}
                 render={({ field }) => (
-                  <TextField select fullWidth label="Priority" {...field}>
+                  <TextField select fullWidth label={t("task.priority")} {...field}>
                     {PRIORITIES.map((p) => (
                       <MenuItem key={p} value={p}>
-                        {PRIORITY_META[p].label}
+                        {t(`priority.${p}`)}
                       </MenuItem>
                     ))}
                   </TextField>
@@ -275,7 +293,7 @@ export default function TaskDialog({ open, task, defaultStatus, onClose, onSave 
                     {...field}
                     type="date"
                     fullWidth
-                    label="Due date"
+                    label={t("task.dueDate")}
                     value={field.value ?? ""}
                     slotProps={{ inputLabel: { shrink: true } }}
                   />
@@ -291,8 +309,8 @@ export default function TaskDialog({ open, task, defaultStatus, onClose, onSave 
                 <TextField
                   {...field}
                   fullWidth
-                  label="Estimated Time"
-                  placeholder="e.g. 2h, 45m, 1d"
+                  label={t("task.estimatedTime")}
+                  placeholder={t("task.estTimePlaceholder")}
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
@@ -300,7 +318,7 @@ export default function TaskDialog({ open, task, defaultStatus, onClose, onSave 
                       </InputAdornment>
                     ),
                   }}
-                  helperText="Estimate effort required for this task"
+                  helperText={t("task.estTimeHelper")}
                 />
               )}
             />
@@ -318,14 +336,14 @@ export default function TaskDialog({ open, task, defaultStatus, onClose, onSave 
                 }}
               >
                 <Typography variant="subtitle2" sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <LabelIcon fontSize="small" color="action" /> Labels / Tags
+                  <LabelIcon fontSize="small" color="action" /> {t("task.labels")}
                 </Typography>
                 <Button
                   size="small"
                   startIcon={<AddIcon />}
                   onClick={() => setShowNewLabelForm((prev) => !prev)}
                 >
-                  {showNewLabelForm ? "Cancel" : "New label"}
+                  {showNewLabelForm ? t("common.cancel") : t("task.newLabel")}
                 </Button>
               </Box>
 
@@ -342,12 +360,12 @@ export default function TaskDialog({ open, task, defaultStatus, onClose, onSave 
                   }}
                 >
                   <Typography variant="caption" fontWeight={700} sx={{ display: "block", mb: 1 }}>
-                    Create custom label
+                    {t("task.createCustomLabel")}
                   </Typography>
                   <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems="center">
                     <TextField
                       size="small"
-                      placeholder="Label name"
+                      placeholder={t("task.labelNamePlaceholder")}
                       value={newLabelName}
                       onChange={(e) => setNewLabelName(e.target.value)}
                       onKeyDown={(e) => {
@@ -378,7 +396,7 @@ export default function TaskDialog({ open, task, defaultStatus, onClose, onSave 
                       ))}
                     </Stack>
                     <Button variant="contained" size="small" onClick={handleCreateLabel}>
-                      Add
+                      {t("common.add")}
                     </Button>
                   </Stack>
                 </Box>
@@ -415,8 +433,10 @@ export default function TaskDialog({ open, task, defaultStatus, onClose, onSave 
             {/* Subtasks (Checklist) */}
             <Box>
               <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
-                Subtasks ({subtaskFields.filter((_, i) => watch(`subtasks.${i}.completed`)).length}/
-                {subtaskFields.length})
+                {t("task.subtasksCount", {
+                  completed: subtaskFields.filter((_, i) => watch(`subtasks.${i}.completed`)).length,
+                  total: subtaskFields.length,
+                })}
               </Typography>
 
               <Stack spacing={1} sx={{ mb: 2 }}>
@@ -458,7 +478,7 @@ export default function TaskDialog({ open, task, defaultStatus, onClose, onSave 
                       <IconButton
                         size="small"
                         onClick={() => removeSubtask(idx)}
-                        aria-label="Remove subtask"
+                        aria-label={t("task.removeSubtask")}
                       >
                         <CloseIcon fontSize="small" />
                       </IconButton>
@@ -471,7 +491,7 @@ export default function TaskDialog({ open, task, defaultStatus, onClose, onSave 
                 <TextField
                   size="small"
                   fullWidth
-                  placeholder="Add a subtask..."
+                  placeholder={t("task.addSubtaskPlaceholder")}
                   value={newSubtaskTitle}
                   onChange={(e) => setNewSubtaskTitle(e.target.value)}
                   onKeyDown={(e) => {
@@ -482,7 +502,7 @@ export default function TaskDialog({ open, task, defaultStatus, onClose, onSave 
                   }}
                 />
                 <Button variant="outlined" size="small" onClick={handleAddSubtask} sx={{ px: 2 }}>
-                  Add
+                  {t("common.add")}
                 </Button>
               </Stack>
             </Box>
@@ -500,8 +520,8 @@ export default function TaskDialog({ open, task, defaultStatus, onClose, onSave 
                   multiline
                   minRows={2}
                   maxRows={5}
-                  label="Notes"
-                  placeholder="Internal notes, links, reference details..."
+                  label={t("task.notes")}
+                  placeholder={t("task.notesPlaceholder")}
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start" sx={{ alignSelf: "flex-start", mt: 1 }}>
@@ -516,10 +536,10 @@ export default function TaskDialog({ open, task, defaultStatus, onClose, onSave 
         </DialogContent>
         <DialogActions sx={{ px: 3, py: 2 }}>
           <Button onClick={onClose} color="inherit">
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button type="submit" variant="contained">
-            {task ? "Save changes" : "Add task"}
+            {task ? t("task.save") : t("task.add")}
           </Button>
         </DialogActions>
       </form>

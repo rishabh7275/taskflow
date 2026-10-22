@@ -3,8 +3,10 @@ import { persist, createJSONStorage, type StateStorage } from "zustand/middlewar
 import type { PaletteMode } from "@mui/material";
 import type { Priority, Status, Task, TaskInput, Label, Board, ThemeMode, Density, AccentColor, Language } from "../types";
 import { createSeedTasks, DEFAULT_PRESET_LABELS, DEFAULT_BOARD } from "../seed";
+import i18n from "../lib/i18n";
 
 export type PriorityFilter = "all" | Priority;
+export type SyncStatus = "idle" | "saving" | "saved" | "error";
 
 export interface DialogState {
   open: boolean;
@@ -86,6 +88,14 @@ export interface TaskStore {
   undo: () => void;
   redo: () => void;
   setToast: (toast: Toast | null) => void;
+
+  // Cloud sync & Auth
+  syncStatus: SyncStatus;
+  isDataLoaded: boolean;
+  setSyncStatus: (status: SyncStatus) => void;
+  setIsDataLoaded: (loaded: boolean) => void;
+  loadUserData: (data: Partial<TaskStore>) => void;
+  loadDemoData: () => void;
 }
 
 export function migrateTask(raw: Partial<Task>): Task {
@@ -102,10 +112,10 @@ export function migrateTask(raw: Partial<Task>): Task {
     labels: Array.isArray(raw.labels) ? raw.labels : [],
     subtasks: Array.isArray(raw.subtasks)
       ? raw.subtasks.map((s, idx) => ({
-          id: s.id ?? `sub-${idx + 1}`,
-          title: s.title ?? "",
-          completed: Boolean(s.completed),
-        }))
+        id: s.id ?? `sub-${idx + 1}`,
+        title: s.title ?? "",
+        completed: Boolean(s.completed),
+      }))
       : [],
     estimatedTime: raw.estimatedTime ?? "",
     notes: raw.notes ?? "",
@@ -118,65 +128,51 @@ export function migrateTasksArray(arr: unknown[]): Task[] {
 
 const LEGACY_TASKS_KEY = "taskflow.tasks";
 const LEGACY_MODE_KEY = "taskflow.mode";
-export const STORAGE_KEY = "taskflow-storage";
+export const STORAGE_KEY = "taskflow-preferences";
+
+let skipPersist = false;
+
+export function clearInMemoryData(): void {
+  skipPersist = true;
+  useTaskStore.setState({
+    boards: [DEFAULT_BOARD],
+    activeBoardId: DEFAULT_BOARD.id,
+    tasks: [],
+    availableLabels: DEFAULT_PRESET_LABELS,
+    selectedTaskIds: [],
+    past: [],
+    future: [],
+    query: "",
+    filter: "all",
+    dialog: { open: false, task: null, status: "todo" },
+    toast: null,
+    syncStatus: "idle",
+    isDataLoaded: false,
+  });
+  try {
+    localStorage.removeItem("taskflow-storage");
+    localStorage.removeItem(LEGACY_TASKS_KEY);
+    localStorage.removeItem(LEGACY_MODE_KEY);
+  } catch {
+    // ignore
+  }
+  skipPersist = false;
+}
 
 const storageWithMigration: StateStorage = {
   getItem: (name: string): string | null => {
     try {
       const item = localStorage.getItem(name);
       if (item !== null) {
-        const parsed = JSON.parse(item);
-        if (parsed?.state?.tasks && Array.isArray(parsed.state.tasks)) {
-          parsed.state.tasks = migrateTasksArray(parsed.state.tasks);
-        }
-        if (!parsed?.state?.boards || !Array.isArray(parsed.state.boards) || parsed.state.boards.length === 0) {
-          if (!parsed.state) parsed.state = {};
-          parsed.state.boards = [DEFAULT_BOARD];
-          parsed.state.activeBoardId = DEFAULT_BOARD.id;
-        }
-        return JSON.stringify(parsed);
-      }
-
-      // Check for legacy localStorage data
-      const legacyTasksRaw = localStorage.getItem(LEGACY_TASKS_KEY);
-      if (legacyTasksRaw !== null) {
-        const legacyTasks = JSON.parse(legacyTasksRaw);
-        let mode: PaletteMode = "light";
-        const legacyModeRaw = localStorage.getItem(LEGACY_MODE_KEY);
-        if (legacyModeRaw !== null) {
-          try {
-            const parsed = JSON.parse(legacyModeRaw);
-            if (parsed === "light" || parsed === "dark") {
-              mode = parsed;
-            }
-          } catch {
-            // ignore
-          }
-        }
-
-        const migrated = JSON.stringify({
-          state: {
-            boards: [DEFAULT_BOARD],
-            activeBoardId: DEFAULT_BOARD.id,
-            tasks: Array.isArray(legacyTasks) ? migrateTasksArray(legacyTasks) : createSeedTasks(),
-            availableLabels: DEFAULT_PRESET_LABELS,
-            themeMode: mode,
-            mode,
-            accentColor: "#4F46E5",
-            density: "comfortable",
-            language: "en",
-          },
-          version: 0,
-        });
-        localStorage.setItem(name, migrated);
-        return migrated;
+        return item;
       }
     } catch (e) {
-      console.warn("TaskFlow: Error migrating legacy tasks from localStorage", e);
+      console.warn("TaskFlow: Error reading preferences from localStorage", e);
     }
     return null;
   },
   setItem: (name: string, value: string): void => {
+    if (skipPersist) return;
     try {
       localStorage.setItem(name, value);
     } catch (e) {
@@ -199,7 +195,7 @@ export const useTaskStore = create<TaskStore>()(
     (set, get) => ({
       boards: [DEFAULT_BOARD],
       activeBoardId: DEFAULT_BOARD.id,
-      tasks: createSeedTasks(),
+      tasks: [],
       availableLabels: DEFAULT_PRESET_LABELS,
       themeMode: "light",
       mode: "light",
@@ -215,6 +211,58 @@ export const useTaskStore = create<TaskStore>()(
       future: [],
       isShortcutsOpen: false,
       isCommandPaletteOpen: false,
+      syncStatus: "idle",
+      isDataLoaded: false,
+
+      setSyncStatus: (syncStatus) =>
+        set((state) => (state.syncStatus === syncStatus ? state : { syncStatus })),
+
+      setIsDataLoaded: (isDataLoaded) => set({ isDataLoaded }),
+
+      loadDemoData: () => {
+        const seedTasks = createSeedTasks();
+        set({
+          boards: [DEFAULT_BOARD],
+          activeBoardId: DEFAULT_BOARD.id,
+          tasks: seedTasks,
+          availableLabels: DEFAULT_PRESET_LABELS,
+          selectedTaskIds: [],
+          past: [],
+          future: [],
+          toast: { message: i18n.t("toast.demoLoaded", { defaultValue: "Demo tasks loaded" }) },
+        });
+      },
+
+      loadUserData: (data) => {
+        const tasks = Array.isArray(data.tasks) ? migrateTasksArray(data.tasks) : [];
+        const boards =
+          Array.isArray(data.boards) && data.boards.length > 0 ? data.boards : [DEFAULT_BOARD];
+        const activeBoardId =
+          data.activeBoardId && boards.some((b) => b.id === data.activeBoardId)
+            ? data.activeBoardId
+            : boards[0].id;
+        const availableLabels =
+          Array.isArray(data.availableLabels) && data.availableLabels.length > 0
+            ? data.availableLabels
+            : DEFAULT_PRESET_LABELS;
+
+        set({
+          boards,
+          activeBoardId,
+          tasks,
+          availableLabels,
+          themeMode: data.themeMode ?? get().themeMode,
+          mode: data.mode ?? get().mode,
+          accentColor: data.accentColor ?? get().accentColor,
+          density: data.density ?? get().density,
+          language: data.language ?? get().language,
+          selectedTaskIds: [],
+          past: [],
+          future: [],
+          isDataLoaded: true,
+          syncStatus: "saved",
+        });
+      },
 
       // Settings actions
       setThemeMode: (themeMode) => {
@@ -235,7 +283,11 @@ export const useTaskStore = create<TaskStore>()(
       setLanguage: (language) => {
         try {
           localStorage.setItem("taskflow.language", language);
-        } catch {}
+        } catch { }
+        void i18n.changeLanguage(language);
+        if (typeof document !== "undefined") {
+          document.documentElement.lang = language === "hi" ? "hi-IN" : "en-IN";
+        }
         set({ language });
       },
 
@@ -243,7 +295,7 @@ export const useTaskStore = create<TaskStore>()(
         set({
           boards: [DEFAULT_BOARD],
           activeBoardId: DEFAULT_BOARD.id,
-          tasks: createSeedTasks(),
+          tasks: [],
           availableLabels: DEFAULT_PRESET_LABELS,
           themeMode: "light",
           mode: "light",
@@ -253,7 +305,7 @@ export const useTaskStore = create<TaskStore>()(
           selectedTaskIds: [],
           past: [],
           future: [],
-          toast: { message: "All workspace data reset to defaults" },
+          toast: { message: i18n.t("toast.allDataReset") },
         });
       },
 
@@ -273,7 +325,7 @@ export const useTaskStore = create<TaskStore>()(
           boards: [...state.boards, newBoard],
           activeBoardId: newBoard.id,
           selectedTaskIds: [],
-          toast: { message: `Created board "${newBoard.name}"` },
+          toast: { message: i18n.t("toast.createdBoard", { name: newBoard.name }) },
         }));
         return newBoard.id;
       },
@@ -281,14 +333,14 @@ export const useTaskStore = create<TaskStore>()(
       renameBoard: (id, name) => {
         set((state) => ({
           boards: state.boards.map((b) => (b.id === id ? { ...b, name: name.trim() || b.name } : b)),
-          toast: { message: "Board renamed" },
+          toast: { message: i18n.t("toast.boardRenamed") },
         }));
       },
 
       deleteBoard: (id) => {
         const { boards, activeBoardId, tasks } = get();
         if (boards.length <= 1) {
-          set({ toast: { message: "Cannot delete the only remaining board" } });
+          set({ toast: { message: i18n.t("toast.cannotDeleteOnlyBoard") } });
           return;
         }
         const remainingBoards = boards.filter((b) => b.id !== id);
@@ -298,7 +350,7 @@ export const useTaskStore = create<TaskStore>()(
           activeBoardId: newActive,
           tasks: tasks.filter((t) => t.boardId !== id),
           selectedTaskIds: [],
-          toast: { message: "Board deleted" },
+          toast: { message: i18n.t("toast.boardDeleted") },
         });
       },
 
@@ -313,7 +365,12 @@ export const useTaskStore = create<TaskStore>()(
             activeBoardId: board.id,
             tasks: [...tasksWithoutImported, ...newTasks],
             selectedTaskIds: [],
-            toast: { message: `Imported board "${board.name}" with ${newTasks.length} tasks` },
+            toast: {
+              message: i18n.t("toast.importedBoard", {
+                name: board.name,
+                count: newTasks.length,
+              }),
+            },
           };
         });
       },
@@ -371,7 +428,7 @@ export const useTaskStore = create<TaskStore>()(
                 completedAt: willBeDone ? (wasDone ? t.completedAt : Date.now()) : null,
               };
             }),
-            toast: { message: "Task updated", undo: () => get().undo() },
+            toast: { message: i18n.t("toast.taskUpdated"), undo: () => get().undo() },
             dialog: { ...state.dialog, open: false },
           }));
         } else {
@@ -386,7 +443,7 @@ export const useTaskStore = create<TaskStore>()(
             past: nextPast,
             future: [],
             tasks: [newTask, ...state.tasks],
-            toast: { message: "Task added", undo: () => get().undo() },
+            toast: { message: i18n.t("toast.taskAdded"), undo: () => get().undo() },
             dialog: { ...state.dialog, open: false },
           }));
         }
@@ -407,7 +464,10 @@ export const useTaskStore = create<TaskStore>()(
               ? { ...t, status, completedAt: isDone ? t.completedAt || Date.now() : null }
               : t
           ),
-          toast: { message: `Moved to ${status}`, undo: () => get().undo() },
+          toast: {
+            message: i18n.t("toast.movedTo", { status: i18n.t(`status.${status}`) }),
+            undo: () => get().undo(),
+          },
         });
       },
 
@@ -444,7 +504,10 @@ export const useTaskStore = create<TaskStore>()(
           past: nextPast,
           future: [],
           tasks: withoutActive,
-          toast: { message: `Task moved to ${targetStatus}`, undo: () => get().undo() },
+          toast: {
+            message: i18n.t("toast.taskMovedTo", { status: i18n.t(`status.${targetStatus}`) }),
+            undo: () => get().undo(),
+          },
         });
       },
 
@@ -467,7 +530,7 @@ export const useTaskStore = create<TaskStore>()(
           past: nextPast,
           future: [],
           tasks: updated,
-          toast: { message: "Tasks reordered", undo: () => get().undo() },
+          toast: { message: i18n.t("toast.tasksReordered"), undo: () => get().undo() },
         });
       },
 
@@ -480,7 +543,7 @@ export const useTaskStore = create<TaskStore>()(
           tasks: tasks.filter((t) => t.id !== task.id),
           selectedTaskIds: get().selectedTaskIds.filter((id) => id !== task.id),
           toast: {
-            message: "Task deleted",
+            message: i18n.t("toast.taskDeleted"),
             undo: () => get().undo(),
           },
         });
@@ -564,7 +627,10 @@ export const useTaskStore = create<TaskStore>()(
           ),
           selectedTaskIds: [],
           toast: {
-            message: `Moved ${count} task${count > 1 ? "s" : ""} to ${status}`,
+            message: i18n.t(count > 1 ? "toast.bulkMoved_other" : "toast.bulkMoved_one", {
+              count,
+              status: i18n.t(`status.${status}`),
+            }),
             undo: () => get().undo(),
           },
         });
@@ -581,7 +647,9 @@ export const useTaskStore = create<TaskStore>()(
           tasks: tasks.map((t) => (selectedTaskIds.includes(t.id) ? { ...t, priority } : t)),
           selectedTaskIds: [],
           toast: {
-            message: `Updated priority for ${count} task${count > 1 ? "s" : ""}`,
+            message: i18n.t(count > 1 ? "toast.bulkPriority_other" : "toast.bulkPriority_one", {
+              count,
+            }),
             undo: () => get().undo(),
           },
         });
@@ -598,7 +666,9 @@ export const useTaskStore = create<TaskStore>()(
           tasks: tasks.filter((t) => !selectedTaskIds.includes(t.id)),
           selectedTaskIds: [],
           toast: {
-            message: `Deleted ${count} task${count > 1 ? "s" : ""}`,
+            message: i18n.t(count > 1 ? "toast.bulkDeleted_other" : "toast.bulkDeleted_one", {
+              count,
+            }),
             undo: () => get().undo(),
           },
         });
@@ -617,7 +687,7 @@ export const useTaskStore = create<TaskStore>()(
           future: newFuture,
           tasks: previous,
           toast: {
-            message: "Action undone",
+            message: i18n.t("toast.actionUndone"),
             redo: () => get().redo(),
           },
         });
@@ -635,7 +705,7 @@ export const useTaskStore = create<TaskStore>()(
           future: newFuture,
           tasks: next,
           toast: {
-            message: "Action redone",
+            message: i18n.t("toast.actionRedone"),
             undo: () => get().undo(),
           },
         });
@@ -647,10 +717,6 @@ export const useTaskStore = create<TaskStore>()(
       name: STORAGE_KEY,
       storage: createJSONStorage(() => storageWithMigration),
       partialize: (state) => ({
-        boards: state.boards,
-        activeBoardId: state.activeBoardId,
-        tasks: state.tasks,
-        availableLabels: state.availableLabels,
         themeMode: state.themeMode,
         mode: state.mode,
         accentColor: state.accentColor,

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Button,
   Dialog,
@@ -18,6 +19,7 @@ interface Props {
 }
 
 export default function BoardModal({ open, board, onClose, onSave }: Props) {
+  const { t } = useTranslation();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [error, setError] = useState(false);
@@ -44,7 +46,7 @@ export default function BoardModal({ open, board, onClose, onSave }: Props) {
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">
       <form onSubmit={handleSubmit}>
         <DialogTitle sx={{ fontWeight: 700 }}>
-          {board ? "Rename Board" : "New Board"}
+          {board ? t("boards.renameBoard") : t("boards.newBoard")}
         </DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 1 }}>
@@ -52,20 +54,20 @@ export default function BoardModal({ open, board, onClose, onSave }: Props) {
               autoFocus
               required
               fullWidth
-              label="Board Name"
-              placeholder="e.g. Sprint 24, Marketing, Personal"
+              label={t("boards.nameLabel")}
+              placeholder={t("boards.namePlaceholder")}
               value={name}
               onChange={(e) => {
                 setName(e.target.value);
                 if (e.target.value.trim()) setError(false);
               }}
               error={error}
-              helperText={error ? "Board name cannot be empty" : " "}
+              helperText={error ? t("boards.nameRequired") : " "}
             />
             <TextField
               fullWidth
-              label="Description (optional)"
-              placeholder="Brief purpose of this board"
+              label={t("boards.descLabel")}
+              placeholder={t("boards.descPlaceholder")}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
@@ -73,10 +75,10 @@ export default function BoardModal({ open, board, onClose, onSave }: Props) {
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={onClose} color="inherit">
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button type="submit" variant="contained">
-            {board ? "Save" : "Create"}
+            {board ? t("common.save") : t("common.create")}
           </Button>
         </DialogActions>
       </form>

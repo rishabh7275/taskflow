@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Box,
   Card,
@@ -32,24 +33,26 @@ import { useTaskStore } from "../store";
 import { STATUSES, STATUS_META, PRIORITIES, PRIORITY_META } from "../utils";
 
 export default function AnalyticsPage() {
+  const { t, i18n } = useTranslation();
   const theme = useTheme();
   const tasks = useTaskStore((s) => s.tasks);
   const accentColor = useTaskStore((s) => s.accentColor);
 
   const total = tasks.length;
-  const doing = tasks.filter((t) => t.status === "doing").length;
-  const done = tasks.filter((t) => t.status === "done").length;
+  const doing = tasks.filter((item) => item.status === "doing").length;
+  const done = tasks.filter((item) => item.status === "done").length;
   const completionRate = total === 0 ? 0 : Math.round((done / total) * 100);
+  const locale = i18n.language === "hi" ? "hi-IN" : "en-IN";
 
   // Calculate current streak (consecutive days with completed tasks)
   const currentStreak = useMemo(() => {
-    const completedTasks = tasks.filter((t) => t.status === "done" && t.completedAt);
+    const completedTasks = tasks.filter((item) => item.status === "done" && item.completedAt);
     if (completedTasks.length === 0) return 0;
 
     const completedDays = new Set<string>();
-    for (const t of completedTasks) {
-      if (t.completedAt) {
-        const d = new Date(t.completedAt);
+    for (const item of completedTasks) {
+      if (item.completedAt) {
+        const d = new Date(item.completedAt);
         const yyyy = d.getFullYear();
         const mm = String(d.getMonth() + 1).padStart(2, "0");
         const dd = String(d.getDate()).padStart(2, "0");
@@ -103,11 +106,11 @@ export default function AnalyticsPage() {
       const mm = String(d.getMonth() + 1).padStart(2, "0");
       const dd = String(d.getDate()).padStart(2, "0");
       const key = `${yyyy}-${mm}-${dd}`;
-      const shortLabel = d.toLocaleDateString("en-IN", { month: "short", day: "numeric" });
+      const shortLabel = d.toLocaleDateString(locale, { month: "short", day: "numeric" });
 
-      const count = tasks.filter((t) => {
-        if (t.status !== "done" || !t.completedAt) return false;
-        const taskDate = new Date(t.completedAt);
+      const count = tasks.filter((item) => {
+        if (item.status !== "done" || !item.completedAt) return false;
+        const taskDate = new Date(item.completedAt);
         const taskKey = `${taskDate.getFullYear()}-${String(taskDate.getMonth() + 1).padStart(2, "0")}-${String(taskDate.getDate()).padStart(2, "0")}`;
         return taskKey === key;
       }).length;
@@ -116,35 +119,35 @@ export default function AnalyticsPage() {
     }
 
     return data;
-  }, [tasks]);
+  }, [tasks, locale]);
 
   // Tasks by status data for Donut Chart
   const statusData = useMemo(() => {
     return STATUSES.map((s) => ({
-      name: STATUS_META[s].label,
-      value: tasks.filter((t) => t.status === s).length,
+      name: t(`status.${s}`),
+      value: tasks.filter((item) => item.status === s).length,
       color: STATUS_META[s].color,
     }));
-  }, [tasks]);
+  }, [tasks, t]);
 
   // Tasks by priority data for Bar Chart
   const priorityData = useMemo(() => {
     return PRIORITIES.map((p) => ({
-      name: PRIORITY_META[p].label,
-      count: tasks.filter((t) => t.priority === p).length,
+      name: t(`priority.${p}`),
+      count: tasks.filter((item) => item.priority === p).length,
       color: PRIORITY_META[p].color,
     }));
-  }, [tasks]);
+  }, [tasks, t]);
 
   return (
     <Container maxWidth="xl" sx={{ pt: 3, pb: 6 }}>
       {/* Header */}
       <Box sx={{ mb: 4 }}>
         <Typography variant="h5" component="h2" fontWeight={700}>
-          Analytics
+          {t("analytics.title")}
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          Track workflow velocity, completion metrics, and status distribution across your workspace.
+          {t("analytics.subtitle")}
         </Typography>
       </Box>
 
@@ -177,7 +180,7 @@ export default function AnalyticsPage() {
               {completionRate}%
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Completion Rate
+              {t("analytics.completionRate")}
             </Typography>
           </Box>
         </Paper>
@@ -199,10 +202,10 @@ export default function AnalyticsPage() {
           </Box>
           <Box>
             <Typography variant="h4" fontWeight={700} sx={{ lineHeight: 1.1 }}>
-              {currentStreak} {currentStreak === 1 ? "day" : "days"}
+              {currentStreak} {currentStreak === 1 ? t("analytics.day") : t("analytics.days")}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Current Streak
+              {t("analytics.currentStreak")}
             </Typography>
           </Box>
         </Paper>
@@ -227,7 +230,7 @@ export default function AnalyticsPage() {
               {done}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Tasks Completed
+              {t("analytics.completedTasks")}
             </Typography>
           </Box>
         </Paper>
@@ -252,7 +255,7 @@ export default function AnalyticsPage() {
               {doing}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              In Progress
+              {t("analytics.inProgress")}
             </Typography>
           </Box>
         </Paper>
@@ -263,10 +266,10 @@ export default function AnalyticsPage() {
         {/* 14 Days Area Chart */}
         <Card variant="outlined" sx={{ p: 3, borderRadius: 3 }}>
           <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 0.5 }}>
-            Tasks Completed (Last 14 Days)
+            {t("analytics.activityTitle")}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Daily throughput based on completed task timestamps.
+            {t("analytics.activitySubtitle")}
           </Typography>
 
           <Box sx={{ width: "100%", height: 280 }}>
@@ -305,7 +308,7 @@ export default function AnalyticsPage() {
                 <Area
                   type="monotone"
                   dataKey="completed"
-                  name="Completed Tasks"
+                  name={t("analytics.completedTasks")}
                   stroke={accentColor}
                   strokeWidth={2.5}
                   fillOpacity={1}
@@ -327,10 +330,10 @@ export default function AnalyticsPage() {
           {/* Donut Chart: Tasks by Status */}
           <Card variant="outlined" sx={{ p: 3, borderRadius: 3 }}>
             <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 0.5 }}>
-              Tasks by Status
+              {t("analytics.statusTitle")}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Current workflow state distribution.
+              {t("analytics.statusSubtitle")}
             </Typography>
 
             <Box sx={{ width: "100%", height: 260 }}>
@@ -372,10 +375,10 @@ export default function AnalyticsPage() {
           {/* Bar Chart: Tasks by Priority */}
           <Card variant="outlined" sx={{ p: 3, borderRadius: 3 }}>
             <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 0.5 }}>
-              Tasks by Priority
+              {t("analytics.priorityTitle")}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              High, medium, and low urgency breakdown.
+              {t("analytics.prioritySubtitle")}
             </Typography>
 
             <Box sx={{ width: "100%", height: 260 }}>
@@ -404,7 +407,7 @@ export default function AnalyticsPage() {
                       fontSize: 13,
                     }}
                   />
-                  <Bar dataKey="count" name="Tasks" radius={[6, 6, 0, 0]}>
+                  <Bar dataKey="count" name={t("analytics.tasks")} radius={[6, 6, 0, 0]}>
                     {priorityData.map((entry) => (
                       <Cell key={entry.name} fill={entry.color} />
                     ))}

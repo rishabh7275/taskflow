@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Box,
   Chip,
@@ -28,11 +29,10 @@ import TaskAltIcon from "@mui/icons-material/TaskAlt";
 import { useNavigate } from "react-router-dom";
 import { useTaskStore } from "../store";
 import { exportBoardAsJSON, exportTasksAsCSV } from "../lib/dataTools";
-import { PRIORITY_META } from "../utils";
 
 interface CommandItem {
   id: string;
-  category: "Navigation" | "Actions" | "Boards" | "Tasks";
+  category: string;
   title: string;
   subtitle?: string;
   icon: React.ReactNode;
@@ -41,6 +41,7 @@ interface CommandItem {
 }
 
 export default function CommandPalette() {
+  const { t } = useTranslation();
   const isOpen = useTaskStore((s) => s.isCommandPaletteOpen);
   const setOpen = useTaskStore((s) => s.setCommandPaletteOpen);
   const boards = useTaskStore((s) => s.boards);
@@ -83,9 +84,9 @@ export default function CommandPalette() {
   const baseCommands: CommandItem[] = [
     {
       id: "nav-board",
-      category: "Navigation",
-      title: "Go to Board",
-      subtitle: "View the Kanban task board",
+      category: t("palette.catNavigation"),
+      title: t("palette.goBoard"),
+      subtitle: t("palette.goBoardDesc"),
       icon: <DashboardIcon fontSize="small" />,
       action: () => {
         navigate("/board");
@@ -94,9 +95,9 @@ export default function CommandPalette() {
     },
     {
       id: "nav-analytics",
-      category: "Navigation",
-      title: "Go to Analytics",
-      subtitle: "Track completion rates and metrics",
+      category: t("palette.catNavigation"),
+      title: t("palette.goAnalytics"),
+      subtitle: t("palette.goAnalyticsDesc"),
       icon: <BarChartIcon fontSize="small" />,
       action: () => {
         navigate("/analytics");
@@ -105,9 +106,9 @@ export default function CommandPalette() {
     },
     {
       id: "nav-settings",
-      category: "Navigation",
-      title: "Go to Settings",
-      subtitle: "Manage theme, data, and preferences",
+      category: t("palette.catNavigation"),
+      title: t("palette.goSettings"),
+      subtitle: t("palette.goSettingsDesc"),
       icon: <SettingsIcon fontSize="small" />,
       action: () => {
         navigate("/settings");
@@ -116,9 +117,9 @@ export default function CommandPalette() {
     },
     {
       id: "act-new-task",
-      category: "Actions",
-      title: "Create new task",
-      subtitle: "Add a task to the current board",
+      category: t("palette.catActions"),
+      title: t("palette.newTask"),
+      subtitle: t("palette.newTaskDesc"),
       icon: <AddIcon fontSize="small" />,
       badge: "N",
       action: () => {
@@ -128,9 +129,9 @@ export default function CommandPalette() {
     },
     {
       id: "act-toggle-theme",
-      category: "Actions",
-      title: `Toggle theme (currently ${mode})`,
-      subtitle: "Switch between dark and light mode",
+      category: t("palette.catActions"),
+      title: t("palette.toggleTheme", { mode }),
+      subtitle: t("palette.toggleThemeDesc"),
       icon: mode === "dark" ? <LightModeIcon fontSize="small" /> : <DarkModeIcon fontSize="small" />,
       action: () => {
         toggleMode();
@@ -139,9 +140,9 @@ export default function CommandPalette() {
     },
     {
       id: "act-shortcuts",
-      category: "Actions",
-      title: "Keyboard shortcuts help",
-      subtitle: "View all keyboard navigation shortcuts",
+      category: t("palette.catActions"),
+      title: t("palette.shortcutsHelp"),
+      subtitle: t("palette.shortcutsHelpDesc"),
       icon: <HelpOutlineIcon fontSize="small" />,
       badge: "?",
       action: () => {
@@ -151,9 +152,9 @@ export default function CommandPalette() {
     },
     {
       id: "act-export-json",
-      category: "Actions",
-      title: "Export active board as JSON",
-      subtitle: "Download backup of tasks and settings",
+      category: t("palette.catActions"),
+      title: t("palette.exportJson"),
+      subtitle: t("palette.exportJsonDesc"),
       icon: <FileDownloadIcon fontSize="small" />,
       action: () => {
         if (activeBoard) exportBoardAsJSON(activeBoard, tasks);
@@ -162,9 +163,9 @@ export default function CommandPalette() {
     },
     {
       id: "act-export-csv",
-      category: "Actions",
-      title: "Export active board as CSV",
-      subtitle: "Download spreadsheet compatible CSV",
+      category: t("palette.catActions"),
+      title: t("palette.exportCsv"),
+      subtitle: t("palette.exportCsvDesc"),
       icon: <FileDownloadIcon fontSize="small" />,
       action: () => {
         if (activeBoard) exportTasksAsCSV(activeBoard, tasks);
@@ -173,11 +174,11 @@ export default function CommandPalette() {
     },
     ...boards.map((b) => ({
       id: `board-${b.id}`,
-      category: "Boards" as const,
-      title: `Switch to board: ${b.name}`,
-      subtitle: b.id === activeBoardId ? "Currently active" : "Switch board view",
+      category: t("palette.catBoards"),
+      title: t("palette.switchToBoard", { name: b.name }),
+      subtitle: b.id === activeBoardId ? t("palette.currentlyActive") : t("palette.switchBoardView"),
       icon: <ViewKanbanIcon fontSize="small" />,
-      badge: b.id === activeBoardId ? "Active" : undefined,
+      badge: b.id === activeBoardId ? t("palette.activeBadge") : undefined,
       action: () => {
         setActiveBoardId(b.id);
         navigate("/board");
@@ -198,17 +199,17 @@ export default function CommandPalette() {
               t.labels.some((l) => l.name.toLowerCase().includes(q))
           )
           .slice(0, 5)
-          .map((t) => ({
-            id: `task-${t.id}`,
-            category: "Tasks",
-            title: t.title,
-            subtitle: `${t.status.toUpperCase()} · ${PRIORITY_META[t.priority].label} priority`,
+          .map((item) => ({
+            id: `task-${item.id}`,
+            category: t("palette.catTasks"),
+            title: item.title,
+            subtitle: `${t(`status.${item.status}`)} · ${t(`priority.${item.priority}`)} ${t("palette.priorityLabel")}`,
             icon: <TaskAltIcon fontSize="small" />,
             action: () => {
-              setActiveBoardId(t.boardId);
+              setActiveBoardId(item.boardId);
               navigate("/board");
               setOpen(false);
-              openEditTask(t);
+              openEditTask(item);
             },
           }))
       : [];
@@ -258,7 +259,7 @@ export default function CommandPalette() {
         <InputBase
           autoFocus
           fullWidth
-          placeholder="Type a command or search tasks..."
+          placeholder={t("palette.placeholder")}
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
@@ -285,7 +286,7 @@ export default function CommandPalette() {
       >
         {allFiltered.length === 0 ? (
           <Typography variant="body2" color="text.secondary" sx={{ py: 4, textAlign: "center" }}>
-            No matching commands or tasks found.
+            {t("palette.empty")}
           </Typography>
         ) : (
           allFiltered.map((item, idx) => {
@@ -301,11 +302,11 @@ export default function CommandPalette() {
                     py: 1,
                     px: 1.5,
                     bgcolor: isSelected
-                      ? (t) => alpha(t.palette.primary.main, t.palette.mode === "light" ? 0.08 : 0.16)
+                      ? (tTheme) => alpha(tTheme.palette.primary.main, tTheme.palette.mode === "light" ? 0.08 : 0.16)
                       : "transparent",
                     "&.Mui-selected": {
-                      bgcolor: (t) =>
-                        alpha(t.palette.primary.main, t.palette.mode === "light" ? 0.08 : 0.16),
+                      bgcolor: (tTheme) =>
+                        alpha(tTheme.palette.primary.main, tTheme.palette.mode === "light" ? 0.08 : 0.16),
                     },
                   }}
                 >
@@ -346,10 +347,10 @@ export default function CommandPalette() {
         }}
       >
         <Typography variant="caption" color="text.secondary">
-          Navigate with <kbd>↑</kbd> <kbd>↓</kbd> · Select with <kbd>↵</kbd>
+          {t("palette.footerNav")}
         </Typography>
         <Typography variant="caption" color="text.secondary">
-          TaskFlow Command Center
+          {t("palette.footerBrand")}
         </Typography>
       </Paper>
     </Dialog>

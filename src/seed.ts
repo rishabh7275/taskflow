@@ -16,6 +16,36 @@ export const DEFAULT_PRESET_LABELS: Label[] = [
   { id: "lbl-dev", name: "Development", color: "#7A5AF8" },
 ];
 
+export const SEED_TASK_TITLES = new Set([
+  "Finish quarterly report",
+  "Book train tickets for Diwali",
+  "Reply to client emails",
+  "Pay electricity bill",
+  "Plan weekend trip",
+  "Fix login page bug",
+  "Write standup notes",
+  "Renew gym membership",
+]);
+
+/**
+ * Returns true if the task array consists entirely of the default seed sample tasks.
+ * Used to automatically clean up user documents that were unintentionally auto-seeded in earlier builds.
+ */
+export function isUnintendedSeedTaskList(tasks: unknown): boolean {
+  if (!Array.isArray(tasks) || tasks.length === 0) return false;
+  return (
+    tasks.length <= 8 &&
+    tasks.every(
+      (t) =>
+        t &&
+        typeof t === "object" &&
+        "title" in t &&
+        typeof t.title === "string" &&
+        SEED_TASK_TITLES.has(t.title)
+    )
+  );
+}
+
 export function createSeedTasks(): Task[] {
   const now = Date.now();
   const ONE_DAY = 86400000;

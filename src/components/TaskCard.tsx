@@ -1,4 +1,5 @@
 import { useState, type MouseEvent, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { motion, useReducedMotion } from "framer-motion";
 import {
   Box,
@@ -32,7 +33,7 @@ import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { Status, Task } from "../types";
-import { PRIORITY_META, STATUSES, STATUS_META, formatDue, isOverdue } from "../utils";
+import { PRIORITY_META, STATUSES, formatDue, isOverdue } from "../utils";
 import { useTaskStore } from "../store";
 
 interface Props {
@@ -44,6 +45,7 @@ interface Props {
 }
 
 export default function TaskCard({ task, onEdit, onDelete, onMove, isOverlay = false }: Props) {
+  const { t, i18n } = useTranslation();
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const [showSubtasks, setShowSubtasks] = useState(false);
 
@@ -57,6 +59,7 @@ export default function TaskCard({ task, onEdit, onDelete, onMove, isOverlay = f
   const priority = PRIORITY_META[task.priority];
   const overdue = isOverdue(task);
   const done = task.status === "done";
+  const locale = i18n.language === "hi" ? "hi-IN" : "en-IN";
 
   const {
     attributes,
@@ -94,7 +97,7 @@ export default function TaskCard({ task, onEdit, onDelete, onMove, isOverlay = f
       <ListItemIcon>
         <EditIcon fontSize="small" />
       </ListItemIcon>
-      <ListItemText>Edit</ListItemText>
+      <ListItemText>{t("common.edit")}</ListItemText>
     </MenuItem>,
     ...STATUSES.filter((s) => s !== task.status).map((s) => (
       <MenuItem
@@ -107,7 +110,9 @@ export default function TaskCard({ task, onEdit, onDelete, onMove, isOverlay = f
         <ListItemIcon>
           <ArrowForwardIcon fontSize="small" />
         </ListItemIcon>
-        <ListItemText>Move to {STATUS_META[s].label}</ListItemText>
+        <ListItemText>
+          {t("bulk.moveToStatus", { status: t(`status.${s}`) })}
+        </ListItemText>
       </MenuItem>
     )),
     <Divider key="divider" />,
@@ -122,7 +127,7 @@ export default function TaskCard({ task, onEdit, onDelete, onMove, isOverlay = f
       <ListItemIcon sx={{ color: "inherit" }}>
         <DeleteIcon fontSize="small" />
       </ListItemIcon>
-      <ListItemText>Delete</ListItemText>
+      <ListItemText>{t("common.delete")}</ListItemText>
     </MenuItem>,
   ];
 
@@ -161,7 +166,7 @@ export default function TaskCard({ task, onEdit, onDelete, onMove, isOverlay = f
           }}
           onClick={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
-          aria-label={`Select ${task.title}`}
+          aria-label={t("task.selectTaskAria", { title: task.title })}
           sx={{ p: 0.25, mt: -0.25, mr: 0.5 }}
         />
 
@@ -180,7 +185,7 @@ export default function TaskCard({ task, onEdit, onDelete, onMove, isOverlay = f
 
         <IconButton
           size="small"
-          aria-label={`Actions for ${task.title}`}
+          aria-label={t("task.actionsForTaskAria", { title: task.title })}
           onClick={(e: MouseEvent<HTMLElement>) => {
             e.stopPropagation();
             setAnchor(e.currentTarget);
@@ -249,7 +254,11 @@ export default function TaskCard({ task, onEdit, onDelete, onMove, isOverlay = f
             onClick={() => setShowSubtasks((prev) => !prev)}
           >
             <Typography variant="caption" fontWeight={600} color="text.secondary">
-              Subtasks: {completedSubtasks}/{totalSubtasks} ({subtaskProgress}%)
+              {t("task.subtasksRatio", {
+                completed: completedSubtasks,
+                total: totalSubtasks,
+                percent: subtaskProgress,
+              })}
             </Typography>
             <IconButton size="small" sx={{ p: 0.25 }}>
               {showSubtasks ? (
@@ -266,7 +275,7 @@ export default function TaskCard({ task, onEdit, onDelete, onMove, isOverlay = f
               height: 5,
               borderRadius: 3,
               mt: 0.25,
-              bgcolor: (t) => alpha(t.palette.primary.main, 0.12),
+              bgcolor: (tTheme) => alpha(tTheme.palette.primary.main, 0.12),
             }}
           />
 
@@ -308,14 +317,14 @@ export default function TaskCard({ task, onEdit, onDelete, onMove, isOverlay = f
       <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap" sx={{ mt: 1.5 }}>
         <Chip
           size="small"
-          label={priority.label}
+          label={t(`priority.${task.priority}`)}
           sx={{ color: priority.color, bgcolor: alpha(priority.color, 0.14), fontWeight: 700 }}
         />
         {task.dueDate && (
           <Chip
             size="small"
             icon={<EventIcon />}
-            label={overdue ? `Overdue · ${formatDue(task.dueDate)}` : formatDue(task.dueDate)}
+            label={overdue ? `${t("board.overdue")} · ${formatDue(task.dueDate, locale)}` : formatDue(task.dueDate, locale)}
             color={overdue ? "error" : "default"}
             variant={overdue ? "filled" : "outlined"}
           />
@@ -334,7 +343,7 @@ export default function TaskCard({ task, onEdit, onDelete, onMove, isOverlay = f
             <Chip
               size="small"
               icon={<StickyNote2OutlinedIcon />}
-              label="Notes"
+              label={t("task.notes")}
               variant="outlined"
               sx={{ fontSize: 12 }}
             />

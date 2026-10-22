@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import {
   Box,
   Button,
@@ -12,31 +13,32 @@ import {
 import KeyboardIcon from "@mui/icons-material/KeyboardOutlined";
 import { useTaskStore } from "../store";
 
-const SHORTCUTS = [
-  { key: "N", description: "Create a new task" },
-  { key: "/", description: "Focus search bar" },
-  { key: "⌘K / Ctrl+K", description: "Open Command Palette" },
-  { key: "?", description: "Open keyboard shortcuts help" },
-  { key: "⌘Z / Ctrl+Z", description: "Undo last task change" },
-  { key: "⌘Shift+Z / Ctrl+Shift+Z", description: "Redo undone action" },
-  { key: "Esc", description: "Close active modal or palette" },
-];
-
 export default function ShortcutsDialog() {
+  const { t } = useTranslation();
   const isOpen = useTaskStore((s) => s.isShortcutsOpen);
   const setOpen = useTaskStore((s) => s.setShortcutsOpen);
+
+  const shortcuts = [
+    { key: "N", description: t("shortcuts.newTask") },
+    { key: "/", description: t("shortcuts.focusSearch") },
+    { key: "⌘K / Ctrl+K", description: t("shortcuts.commandPalette") },
+    { key: "?", description: t("shortcuts.help") },
+    { key: "⌘Z / Ctrl+Z", description: t("shortcuts.undo") },
+    { key: "⌘Shift+Z / Ctrl+Shift+Z", description: t("shortcuts.redo") },
+    { key: "Esc", description: t("shortcuts.closeModal") },
+  ];
 
   return (
     <Dialog open={isOpen} onClose={() => setOpen(false)} fullWidth maxWidth="xs">
       <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1.5, pb: 1 }}>
         <KeyboardIcon color="primary" />
         <Typography variant="h6" fontWeight={700}>
-          Keyboard Shortcuts
+          {t("shortcuts.title")}
         </Typography>
       </DialogTitle>
       <DialogContent dividers>
         <Stack spacing={1.5}>
-          {SHORTCUTS.map((s, idx) => (
+          {shortcuts.map((s, idx) => (
             <Box key={s.key}>
               <Box
                 sx={{
@@ -65,14 +67,14 @@ export default function ShortcutsDialog() {
                   {s.key}
                 </Box>
               </Box>
-              {idx < SHORTCUTS.length - 1 && <Divider sx={{ my: 0.5 }} />}
+              {idx < shortcuts.length - 1 && <Divider sx={{ my: 0.5 }} />}
             </Box>
           ))}
         </Stack>
       </DialogContent>
       <DialogActions sx={{ px: 2.5, py: 1.5 }}>
         <Button onClick={() => setOpen(false)} variant="contained" size="small">
-          Got it
+          {t("shortcuts.gotIt")}
         </Button>
       </DialogActions>
     </Dialog>

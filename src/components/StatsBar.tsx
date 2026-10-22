@@ -1,4 +1,5 @@
 import type { ElementType } from "react";
+import { useTranslation } from "react-i18next";
 import { Box, LinearProgress, Paper, Typography, alpha } from "@mui/material";
 import CheckCircleIcon from "@mui/icons-material/CheckCircleOutline";
 import PlayCircleIcon from "@mui/icons-material/PlayCircleOutline";
@@ -58,6 +59,7 @@ function Stat({
 }
 
 export default function StatsBar({ tasks }: Props) {
+  const { t } = useTranslation();
   const total = tasks.length;
   const doing = tasks.filter((t) => t.status === "doing").length;
   const done = tasks.filter((t) => t.status === "done").length;
@@ -80,20 +82,20 @@ export default function StatsBar({ tasks }: Props) {
               {pct}%
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              {done} of {total} completed
+              {t("stats.completedRatio", { done, total })}
             </Typography>
           </Box>
         </Box>
         <LinearProgress
           variant="determinate"
           value={pct}
-          aria-label="Completion"
+          aria-label={t("stats.completionAria")}
           sx={{ height: 6, borderRadius: 3 }}
         />
       </Paper>
-      <Stat value={doing} label="In progress" icon={PlayCircleIcon} color="#7A5AF8" />
-      <Stat value={overdue} label="Overdue" icon={ErrorIcon} color="#D6453D" />
-      <Stat value={total} label="Total tasks" icon={ListIcon} color="#4F46E5" />
+      <Stat value={doing} label={t("status.doing")} icon={PlayCircleIcon} color="#7A5AF8" />
+      <Stat value={overdue} label={t("board.overdue")} icon={ErrorIcon} color="#D6453D" />
+      <Stat value={total} label={t("stats.totalTasks")} icon={ListIcon} color="#4F46E5" />
     </Box>
   );
 }

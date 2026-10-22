@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Box, IconButton, Stack, Typography, alpha } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import { useDroppable } from "@dnd-kit/core";
@@ -26,7 +27,9 @@ export default function Column({
   onEdit,
   onDelete,
 }: Props) {
+  const { t } = useTranslation();
   const meta = STATUS_META[status];
+  const statusLabel = t(`status.${status}`);
 
   const { setNodeRef, isOver } = useDroppable({
     id: status,
@@ -39,7 +42,7 @@ export default function Column({
     <Box
       ref={setNodeRef}
       component="section"
-      aria-label={meta.label}
+      aria-label={statusLabel}
       sx={{
         p: 1.5,
         borderRadius: 4,
@@ -54,10 +57,10 @@ export default function Column({
       <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.5, px: 0.5 }}>
         <Box sx={{ width: 10, height: 10, borderRadius: "50%", bgcolor: meta.color }} />
         <Typography variant="subtitle1" component="h2" sx={{ flex: 1, fontWeight: 700 }}>
-          {meta.label}
+          {statusLabel}
         </Typography>
         <Box
-          aria-label={`${tasks.length} tasks`}
+          aria-label={t("column.taskCount", { count: tasks.length })}
           sx={{
             minWidth: 26,
             px: 1,
@@ -74,7 +77,7 @@ export default function Column({
         </Box>
         <IconButton
           size="small"
-          aria-label={`Add task to ${meta.label}`}
+          aria-label={t("column.addTask", { status: statusLabel })}
           onClick={() => onAdd(status)}
         >
           <AddIcon fontSize="small" />
@@ -103,7 +106,7 @@ export default function Column({
           color="text.secondary"
           sx={{ px: 1, py: 4, textAlign: "center" }}
         >
-          {isFiltering ? "No tasks match your search or filter." : meta.empty}
+          {isFiltering ? t("column.filterEmptyMessage") : t(`status.${status}Empty`)}
         </Typography>
       )}
     </Box>

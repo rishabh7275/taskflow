@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Box,
   Button,
@@ -41,13 +42,14 @@ import BulkActionBar from "../components/BulkActionBar";
 import TodayWidget from "../components/TodayWidget";
 import { useTaskStore, type PriorityFilter } from "../store";
 import type { Status, Task } from "../types";
-import { PRIORITIES, PRIORITY_META, PRIORITY_RANK, STATUSES, addDays, isOverdue, todayISO } from "../utils";
+import { PRIORITIES, PRIORITY_RANK, STATUSES, addDays, isOverdue, todayISO } from "../utils";
 import { exportBoardAsJSON, exportTasksAsCSV, parseAndValidateImportJSON } from "../lib/dataTools";
 
 type DueFilter = "all" | "today" | "week" | "overdue";
 type SortOption = "newest" | "priority" | "dueDate";
 
 export default function BoardPage() {
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const allTasks = useTaskStore((s) => s.tasks);
@@ -64,6 +66,7 @@ export default function BoardPage() {
   const redo = useTaskStore((s) => s.redo);
   const availableLabels = useTaskStore((s) => s.availableLabels);
   const importBoardAndTasks = useTaskStore((s) => s.importBoardAndTasks);
+  const loadDemoData = useTaskStore((s) => s.loadDemoData);
   const setToast = useTaskStore((s) => s.setToast);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -316,11 +319,11 @@ export default function BoardPage() {
         >
           <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
             <Typography variant="h5" component="h2" fontWeight={700}>
-              {activeBoard?.name || "Board"}
+              {activeBoard?.name || t("nav.board")}
             </Typography>
             <Chip
               size="small"
-              label={`${boardTasks.length} tasks`}
+              label={t("board.taskCount", { count: boardTasks.length })}
               variant="outlined"
               sx={{ fontWeight: 600 }}
             />
@@ -341,7 +344,7 @@ export default function BoardPage() {
               startIcon={<MoreHorizIcon />}
               onClick={(e) => setDataMenuAnchor(e.currentTarget)}
             >
-              Data Tools
+              {t("board.dataTools")}
             </Button>
 
             <Menu
@@ -358,7 +361,7 @@ export default function BoardPage() {
                 <ListItemIcon>
                   <FileDownloadIcon fontSize="small" />
                 </ListItemIcon>
-                <ListItemText>Export Board as JSON</ListItemText>
+                <ListItemText>{t("palette.exportJson")}</ListItemText>
               </MenuItem>
               <MenuItem
                 onClick={() => {
@@ -369,7 +372,7 @@ export default function BoardPage() {
                 <ListItemIcon>
                   <TableChartIcon fontSize="small" />
                 </ListItemIcon>
-                <ListItemText>Export Tasks as CSV</ListItemText>
+                <ListItemText>{t("palette.exportCsv")}</ListItemText>
               </MenuItem>
               <MenuItem
                 onClick={() => {
@@ -380,7 +383,18 @@ export default function BoardPage() {
                 <ListItemIcon>
                   <FileUploadIcon fontSize="small" />
                 </ListItemIcon>
-                <ListItemText>Import Board JSON</ListItemText>
+                <ListItemText>{t("settings.importJSON")}</ListItemText>
+              </MenuItem>
+              <MenuItem
+                onClick={() => {
+                  loadDemoData();
+                  setDataMenuAnchor(null);
+                }}
+              >
+                <ListItemIcon>
+                  <RestartAltIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>{t("board.loadDemo")}</ListItemText>
               </MenuItem>
             </Menu>
           </Stack>
@@ -403,17 +417,17 @@ export default function BoardPage() {
         >
           {/* Priority filter */}
           <FormControl size="small" sx={{ minWidth: 120 }}>
-            <InputLabel id="priority-filter-label">Priority</InputLabel>
+            <InputLabel id="priority-filter-label">{t("priority.label")}</InputLabel>
             <Select
               labelId="priority-filter-label"
               value={priorityFilter}
-              label="Priority"
+              label={t("priority.label")}
               onChange={(e) => updateFilterParam("priority", e.target.value)}
             >
-              <MenuItem value="all">All Priorities</MenuItem>
+              <MenuItem value="all">{t("priority.all")}</MenuItem>
               {PRIORITIES.map((p) => (
                 <MenuItem key={p} value={p}>
-                  {PRIORITY_META[p].label}
+                  {t(`priority.${p}`)}
                 </MenuItem>
               ))}
             </Select>
@@ -421,14 +435,14 @@ export default function BoardPage() {
 
           {/* Label filter */}
           <FormControl size="small" sx={{ minWidth: 120 }}>
-            <InputLabel id="label-filter-label">Label</InputLabel>
+            <InputLabel id="label-filter-label">{t("board.filterLabel")}</InputLabel>
             <Select
               labelId="label-filter-label"
               value={labelFilter}
-              label="Label"
+              label={t("board.filterLabel")}
               onChange={(e) => updateFilterParam("label", e.target.value)}
             >
-              <MenuItem value="all">All Labels</MenuItem>
+              <MenuItem value="all">{t("board.allLabels")}</MenuItem>
               {availableLabels.map((lbl) => (
                 <MenuItem key={lbl.id} value={lbl.id}>
                   {lbl.name}
@@ -439,38 +453,38 @@ export default function BoardPage() {
 
           {/* Due date filter */}
           <FormControl size="small" sx={{ minWidth: 130 }}>
-            <InputLabel id="due-filter-label">Due Date</InputLabel>
+            <InputLabel id="due-filter-label">{t("task.dueDate")}</InputLabel>
             <Select
               labelId="due-filter-label"
               value={dueFilter}
-              label="Due Date"
+              label={t("task.dueDate")}
               onChange={(e) => updateFilterParam("due", e.target.value)}
             >
-              <MenuItem value="all">All Dates</MenuItem>
-              <MenuItem value="today">Due Today</MenuItem>
-              <MenuItem value="week">Due This Week</MenuItem>
-              <MenuItem value="overdue">Overdue</MenuItem>
+              <MenuItem value="all">{t("board.allDates")}</MenuItem>
+              <MenuItem value="today">{t("today.dueToday")}</MenuItem>
+              <MenuItem value="week">{t("board.dueThisWeek")}</MenuItem>
+              <MenuItem value="overdue">{t("today.overdue")}</MenuItem>
             </Select>
           </FormControl>
 
           {/* Sort option */}
           <FormControl size="small" sx={{ minWidth: 140 }}>
-            <InputLabel id="sort-filter-label">Sort By</InputLabel>
+            <InputLabel id="sort-filter-label">{t("board.sortBy")}</InputLabel>
             <Select
               labelId="sort-filter-label"
               value={sortOption}
-              label="Sort By"
+              label={t("board.sortBy")}
               onChange={(e) => updateFilterParam("sort", e.target.value)}
             >
-              <MenuItem value="newest">Manual / Newest</MenuItem>
-              <MenuItem value="priority">Priority (High-Low)</MenuItem>
-              <MenuItem value="dueDate">Due Date (Earliest)</MenuItem>
+              <MenuItem value="newest">{t("board.sortNewest")}</MenuItem>
+              <MenuItem value="priority">{t("board.sortPriority")}</MenuItem>
+              <MenuItem value="dueDate">{t("board.sortDueDate")}</MenuItem>
             </Select>
           </FormControl>
 
           {/* Reset button */}
           {hasActiveFilters && (
-            <Tooltip title="Reset all filters">
+            <Tooltip title={t("board.resetFiltersTooltip")}>
               <Button
                 size="small"
                 color="inherit"
@@ -478,7 +492,7 @@ export default function BoardPage() {
                 onClick={handleResetFilters}
                 sx={{ ml: "auto" }}
               >
-                Reset
+                {t("common.reset")}
               </Button>
             </Tooltip>
           )}

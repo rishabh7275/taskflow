@@ -74,7 +74,7 @@ export default function SettingsPage() {
       const { board: importedBoard, tasks: importedTasks } = await parseAndValidateImportJSON(text);
       importBoardAndTasks(importedBoard, importedTasks);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to import JSON file";
+      const msg = err instanceof Error ? err.message : t("validation.invalidJson");
       setToast({ message: msg });
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -244,7 +244,7 @@ export default function SettingsPage() {
               size="small"
               value={density}
               onChange={(_, val: Density | null) => val && setDensity(val)}
-              aria-label="Interface density"
+              aria-label={t("settings.density")}
             >
               <ToggleButton value="comfortable" sx={{ display: "flex", gap: 0.75, px: 1.5 }}>
                 <ViewComfyIcon fontSize="small" /> {t("settings.comfortable")}
@@ -274,10 +274,10 @@ export default function SettingsPage() {
 
           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2.5 }}>
             <Typography variant="body2" color="text.secondary">
-              Total active tasks across {boards.length} board{boards.length > 1 ? "s" : ""}
+              {t("settings.totalActiveTasks", { count: boards.length })}
             </Typography>
             <Typography variant="subtitle2" fontWeight={700}>
-              {tasks.length} tasks
+              {t("board.taskCount", { count: tasks.length })}
             </Typography>
           </Box>
 
