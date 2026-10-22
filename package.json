@@ -20,6 +20,7 @@
     "@hookform/resolvers": "^3.10.0",
     "@mui/icons-material": "^6.1.0",
     "@mui/material": "^6.1.0",
+    "ai": "^7.0.148",
     "firebase": "^13.0.0",
     "framer-motion": "^14.4.0",
     "i18next": "^26.5.3",
