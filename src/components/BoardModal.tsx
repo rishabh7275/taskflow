@@ -51,6 +51,8 @@ export default function BoardModal({ open, board, onClose, onSave }: Props) {
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 1 }}>
             <TextField
+              id="board-name-input"
+              name="boardName"
               autoFocus
               required
               fullWidth
@@ -65,6 +67,8 @@ export default function BoardModal({ open, board, onClose, onSave }: Props) {
               helperText={error ? t("boards.nameRequired") : " "}
             />
             <TextField
+              id="board-description-input"
+              name="boardDescription"
               fullWidth
               label={t("boards.descLabel")}
               placeholder={t("boards.descPlaceholder")}

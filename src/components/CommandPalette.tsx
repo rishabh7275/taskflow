@@ -257,6 +257,8 @@ export default function CommandPalette() {
       <Box sx={{ p: 2, display: "flex", alignItems: "center", gap: 1.5, borderBottom: 1, borderColor: "divider" }}>
         <SearchIcon color="action" />
         <InputBase
+          id="command-palette-search-input"
+          name="commandPaletteSearch"
           autoFocus
           fullWidth
           placeholder={t("palette.placeholder")}
@@ -266,6 +268,11 @@ export default function CommandPalette() {
             setSelectedIndex(0);
           }}
           onKeyDown={handleKeyDown}
+          inputProps={{
+            id: "command-palette-search-input",
+            name: "commandPaletteSearch",
+            "aria-label": t("palette.placeholder"),
+          }}
           sx={{ fontSize: 16 }}
         />
         <Chip

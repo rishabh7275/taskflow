@@ -282,11 +282,14 @@ export default function SettingsPage() {
           </Box>
 
           <input
+            id="settings-import-file-input"
+            name="settingsImportFile"
             type="file"
             ref={fileInputRef}
             accept=".json"
             style={{ display: "none" }}
             onChange={handleImportFile}
+            aria-label={t("settings.importJSON")}
           />
 
           <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>

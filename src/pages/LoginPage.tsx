@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   Alert,
@@ -49,6 +49,7 @@ export default function LoginPage() {
   const { t } = useTranslation();
   const { user, loading, signInWithEmail, signUpWithEmail, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [tabIndex, setTabIndex] = useState<0 | 1>(0); // 0 = signin, 1 = signup
   const [email, setEmail] = useState("");
@@ -60,9 +61,12 @@ export default function LoginPage() {
   const [googleSubmitting, setGoogleSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // If already logged in, redirect to /board
+  const rawFrom = (location.state as { from?: { pathname?: string } })?.from?.pathname;
+  const targetRoute = rawFrom && rawFrom !== "/login" ? rawFrom : "/board";
+
+  // If already logged in, redirect to targetRoute
   if (!loading && user) {
-    return <Navigate to="/board" replace />;
+    return <Navigate to={targetRoute} replace />;
   }
 
   if (loading) {
@@ -116,7 +120,7 @@ export default function LoginPage() {
       } else {
         await signUpWithEmail(cleanEmail, password);
       }
-      navigate("/board", { replace: true });
+      navigate(targetRoute, { replace: true });
     } catch (err) {
       setErrorMessage(getFriendlyAuthErrorMessage(err));
     } finally {
@@ -129,7 +133,7 @@ export default function LoginPage() {
     setGoogleSubmitting(true);
     try {
       await signInWithGoogle();
-      navigate("/board", { replace: true });
+      navigate(targetRoute, { replace: true });
     } catch (err) {
       setErrorMessage(getFriendlyAuthErrorMessage(err));
     } finally {
@@ -287,6 +291,8 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={isAnyLoading}
+              inputProps={{ id: "auth-email", name: "email" }}
+              InputLabelProps={{ htmlFor: "auth-email" }}
               sx={{ mb: 2 }}
             />
 
@@ -303,6 +309,8 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               disabled={isAnyLoading}
               helperText={tabIndex === 1 ? t("auth.passwordMin") : undefined}
+              inputProps={{ id: "auth-password", name: "password" }}
+              InputLabelProps={{ htmlFor: "auth-password" }}
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
@@ -334,6 +342,8 @@ export default function LoginPage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 disabled={isAnyLoading}
+                inputProps={{ id: "auth-confirm-password", name: "confirmPassword" }}
+                InputLabelProps={{ htmlFor: "auth-confirm-password" }}
                 sx={{ mb: 2.5 }}
               />
             )}

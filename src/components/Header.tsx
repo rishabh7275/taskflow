@@ -153,11 +153,16 @@ export default function Header({
           <SearchIcon fontSize="small" color="action" />
           <InputBase
             id="search-tasks-input"
+            name="search"
             fullWidth
             placeholder={t("search.placeholder")}
             value={query}
             onChange={(e) => onQueryChange(e.target.value)}
-            inputProps={{ "aria-label": t("search.ariaLabel") }}
+            inputProps={{
+              id: "search-tasks-input",
+              name: "search",
+              "aria-label": t("search.ariaLabel"),
+            }}
           />
           <Tooltip title={t("header.commandPaletteTooltip")}>
             <Chip

@@ -158,6 +158,8 @@ export default function TaskCard({ task, onEdit, onDelete, onMove, isOverlay = f
       {/* Top Header: Checkbox + Title + More Menu */}
       <Box sx={{ display: "flex", alignItems: "flex-start", gap: 0.5 }}>
         <Checkbox
+          id={`select-task-${task.id}`}
+          name={`selectTask_${task.id}`}
           size="small"
           checked={isSelected}
           onChange={(e) => {
@@ -166,7 +168,11 @@ export default function TaskCard({ task, onEdit, onDelete, onMove, isOverlay = f
           }}
           onClick={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
-          aria-label={t("task.selectTaskAria", { title: task.title })}
+          inputProps={{
+            id: `select-task-${task.id}`,
+            name: `selectTask_${task.id}`,
+            "aria-label": t("task.selectTaskAria", { title: task.title }),
+          }}
           sx={{ p: 0.25, mt: -0.25, mr: 0.5 }}
         />
 

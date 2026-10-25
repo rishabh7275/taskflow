@@ -277,6 +277,9 @@ const resources = {
         networkFailed: "Network connection error. Please check your internet connection.",
         tooManyRequests: "Too many unsuccessful attempts. Please try again in a few minutes.",
         failed: "Authentication failed. Please try again.",
+        unauthorizedDomain: "This domain is not authorized for Google Sign-In. In Firebase Console, go to Authentication > Settings > Authorized domains and add your deployment domain.",
+        operationNotAllowed: "This sign-in method is not enabled. Please enable it in Firebase Console > Authentication > Sign-in method.",
+        accountExistsDifferentCredential: "An account already exists with this email using a different sign-in method.",
         unexpectedError: "An unexpected error occurred. Please try again.",
       },
       toast: {
@@ -596,6 +599,9 @@ const resources = {
         networkFailed: "नेटवर्क कनेक्शन त्रुटि। कृपया अपना इंटरनेट जांचें।",
         tooManyRequests: "बहुत सारे असफल प्रयास। कृपया कुछ मिनट बाद पुनः प्रयास करें।",
         failed: "प्रमाणीकरण विफल रहा। कृपया पुनः प्रयास करें।",
+        unauthorizedDomain: "यह डोमेन Google साइन-इन के लिए अधिकृत नहीं है। कृपया Firebase Console में Authentication > Settings > Authorized domains में अपना डोमेन जोड़ें।",
+        operationNotAllowed: "यह साइन-इन विधि सक्षम नहीं है। कृपया इसे Firebase Console में Authentication > Sign-in method में सक्षम करें।",
+        accountExistsDifferentCredential: "इस ईमेल के साथ किसी भिन्न साइन-इन विधि से पहले से एक खाता मौजूद है।",
         unexpectedError: "एक अप्रत्याशित त्रुटि हुई। कृपया पुनः प्रयास करें।",
       },
       toast: {

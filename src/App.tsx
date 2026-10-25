@@ -8,7 +8,7 @@ import PageSkeleton from "./components/PageSkeleton";
 import { createAppTheme } from "./lib/theme";
 import { useTaskStore } from "./store";
 import { AuthProvider } from "./context";
-import { useFirestoreSync } from "./hooks";
+import { useFirestoreSync, useAuth } from "./hooks";
 import i18n from "./lib/i18n";
 
 const LoginPage = lazy(() => import("./pages/LoginPage"));
@@ -16,6 +16,16 @@ const BoardPage = lazy(() => import("./pages/BoardPage"));
 const AnalyticsPage = lazy(() => import("./pages/AnalyticsPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
+
+function RootRedirect() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <PageSkeleton />;
+  }
+
+  return user ? <Navigate to="/board" replace /> : <Navigate to="/login" replace />;
+}
 
 function AppContent() {
   // Sync authenticated user workspace with Firestore and user-scoped storage
@@ -32,7 +42,7 @@ function AppContent() {
             </Suspense>
           }
         />
-        <Route path="/" element={<Navigate to="/board" replace />} />
+        <Route path="/" element={<RootRedirect />} />
         <Route
           element={
             <ProtectedRoute>

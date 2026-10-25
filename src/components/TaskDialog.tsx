@@ -226,6 +226,8 @@ export default function TaskDialog({ open, task, defaultStatus, onClose, onSave 
               render={({ field }) => (
                 <TextField
                   {...field}
+                  id="task-title-input"
+                  name="title"
                   autoFocus
                   required
                   fullWidth
@@ -234,6 +236,8 @@ export default function TaskDialog({ open, task, defaultStatus, onClose, onSave 
                   error={Boolean(errors.title)}
                   helperText={errors.title?.message ?? " "}
                   sx={{ "& .MuiFormHelperText-root": { mt: 0.5 } }}
+                  inputProps={{ id: "task-title-input", name: "title" }}
+                  InputLabelProps={{ htmlFor: "task-title-input" }}
                 />
               )}
             />
@@ -245,12 +249,16 @@ export default function TaskDialog({ open, task, defaultStatus, onClose, onSave 
               render={({ field }) => (
                 <TextField
                   {...field}
+                  id="task-description-input"
+                  name="description"
                   fullWidth
                   multiline
                   minRows={2}
                   maxRows={4}
                   label={t("task.description")}
                   placeholder={t("task.descPlaceholder")}
+                  inputProps={{ id: "task-description-input", name: "description" }}
+                  InputLabelProps={{ htmlFor: "task-description-input" }}
                 />
               )}
             />
@@ -261,7 +269,19 @@ export default function TaskDialog({ open, task, defaultStatus, onClose, onSave 
                 name="status"
                 control={control}
                 render={({ field }) => (
-                  <TextField select fullWidth label={t("task.status")} {...field}>
+                  <TextField
+                    {...field}
+                    id="task-status-select"
+                    name="status"
+                    select
+                    fullWidth
+                    label={t("task.status")}
+                    SelectProps={{
+                      id: "task-status-select",
+                      inputProps: { id: "task-status-select", name: "status" },
+                    }}
+                    InputLabelProps={{ htmlFor: "task-status-select" }}
+                  >
                     {STATUSES.map((s) => (
                       <MenuItem key={s} value={s}>
                         {t(`status.${s}`)}
@@ -275,7 +295,19 @@ export default function TaskDialog({ open, task, defaultStatus, onClose, onSave 
                 name="priority"
                 control={control}
                 render={({ field }) => (
-                  <TextField select fullWidth label={t("task.priority")} {...field}>
+                  <TextField
+                    {...field}
+                    id="task-priority-select"
+                    name="priority"
+                    select
+                    fullWidth
+                    label={t("task.priority")}
+                    SelectProps={{
+                      id: "task-priority-select",
+                      inputProps: { id: "task-priority-select", name: "priority" },
+                    }}
+                    InputLabelProps={{ htmlFor: "task-priority-select" }}
+                  >
                     {PRIORITIES.map((p) => (
                       <MenuItem key={p} value={p}>
                         {t(`priority.${p}`)}
@@ -291,11 +323,16 @@ export default function TaskDialog({ open, task, defaultStatus, onClose, onSave 
                 render={({ field }) => (
                   <TextField
                     {...field}
+                    id="task-due-date-input"
+                    name="dueDate"
                     type="date"
                     fullWidth
                     label={t("task.dueDate")}
                     value={field.value ?? ""}
-                    slotProps={{ inputLabel: { shrink: true } }}
+                    slotProps={{
+                      inputLabel: { shrink: true, htmlFor: "task-due-date-input" },
+                      htmlInput: { id: "task-due-date-input", name: "dueDate" },
+                    }}
                   />
                 )}
               />
@@ -308,6 +345,8 @@ export default function TaskDialog({ open, task, defaultStatus, onClose, onSave 
               render={({ field }) => (
                 <TextField
                   {...field}
+                  id="task-estimated-time-input"
+                  name="estimatedTime"
                   fullWidth
                   label={t("task.estimatedTime")}
                   placeholder={t("task.estTimePlaceholder")}
@@ -318,6 +357,8 @@ export default function TaskDialog({ open, task, defaultStatus, onClose, onSave 
                       </InputAdornment>
                     ),
                   }}
+                  inputProps={{ id: "task-estimated-time-input", name: "estimatedTime" }}
+                  InputLabelProps={{ htmlFor: "task-estimated-time-input" }}
                   helperText={t("task.estTimeHelper")}
                 />
               )}
@@ -364,7 +405,10 @@ export default function TaskDialog({ open, task, defaultStatus, onClose, onSave 
                   </Typography>
                   <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems="center">
                     <TextField
+                      id="task-new-label-input"
+                      name="newLabelName"
                       size="small"
+                      label={t("task.createCustomLabel")}
                       placeholder={t("task.labelNamePlaceholder")}
                       value={newLabelName}
                       onChange={(e) => setNewLabelName(e.target.value)}
@@ -375,6 +419,12 @@ export default function TaskDialog({ open, task, defaultStatus, onClose, onSave 
                         }
                       }}
                       sx={{ flex: 1 }}
+                      inputProps={{
+                        id: "task-new-label-input",
+                        name: "newLabelName",
+                        "aria-label": t("task.createCustomLabel"),
+                      }}
+                      InputLabelProps={{ htmlFor: "task-new-label-input" }}
                     />
                     <Stack direction="row" spacing={0.75} alignItems="center">
                       {PRESET_COLORS.map((c) => (
@@ -489,8 +539,11 @@ export default function TaskDialog({ open, task, defaultStatus, onClose, onSave 
 
               <Stack direction="row" spacing={1}>
                 <TextField
+                  id="task-new-subtask-input"
+                  name="newSubtaskTitle"
                   size="small"
                   fullWidth
+                  label={t("task.addSubtaskPlaceholder")}
                   placeholder={t("task.addSubtaskPlaceholder")}
                   value={newSubtaskTitle}
                   onChange={(e) => setNewSubtaskTitle(e.target.value)}
@@ -500,6 +553,12 @@ export default function TaskDialog({ open, task, defaultStatus, onClose, onSave 
                       handleAddSubtask();
                     }
                   }}
+                  inputProps={{
+                    id: "task-new-subtask-input",
+                    name: "newSubtaskTitle",
+                    "aria-label": t("task.addSubtaskPlaceholder"),
+                  }}
+                  InputLabelProps={{ htmlFor: "task-new-subtask-input" }}
                 />
                 <Button variant="outlined" size="small" onClick={handleAddSubtask} sx={{ px: 2 }}>
                   {t("common.add")}
@@ -516,6 +575,8 @@ export default function TaskDialog({ open, task, defaultStatus, onClose, onSave 
               render={({ field }) => (
                 <TextField
                   {...field}
+                  id="task-notes-input"
+                  name="notes"
                   fullWidth
                   multiline
                   minRows={2}
@@ -529,6 +590,8 @@ export default function TaskDialog({ open, task, defaultStatus, onClose, onSave 
                       </InputAdornment>
                     ),
                   }}
+                  inputProps={{ id: "task-notes-input", name: "notes" }}
+                  InputLabelProps={{ htmlFor: "task-notes-input" }}
                 />
               )}
             />

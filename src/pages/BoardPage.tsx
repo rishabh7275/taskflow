@@ -1,3 +1,4 @@
+import AIAssistant from "../components/AIAssistant";
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -293,253 +294,296 @@ export default function BoardPage() {
   };
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCorners}
-      onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
-      onDragEnd={handleDragEnd}
-      onDragCancel={() => setActiveTask(null)}
-    >
-      <Container maxWidth="xl" sx={{ pt: 3, pb: 6 }}>
-        {/* Board Stats */}
-        <StatsBar tasks={boardTasks} />
+    <>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDragEnd={handleDragEnd}
+        onDragCancel={() => setActiveTask(null)}
+      >
+        <Container maxWidth="xl" sx={{ pt: 3, pb: 6 }}>
+          {/* Board Stats */}
+          <StatsBar tasks={boardTasks} />
 
-        {/* Board Header & Data Tools */}
-        <Box
-          sx={{
-            display: "flex",
-            flexWrap: "wrap",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 1.5,
-            mt: 4,
-            mb: 2,
-          }}
-        >
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-            <Typography variant="h5" component="h2" fontWeight={700}>
-              {activeBoard?.name || t("nav.board")}
-            </Typography>
-            <Chip
-              size="small"
-              label={t("board.taskCount", { count: boardTasks.length })}
-              variant="outlined"
-              sx={{ fontWeight: 600 }}
-            />
-          </Box>
+          {/* Board Header & Data Tools */}
+          <Box
+            sx={{
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 1.5,
+              mt: 4,
+              mb: 2,
+            }}
+          >
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+              <Typography variant="h5" component="h2" fontWeight={700}>
+                {activeBoard?.name || t("nav.board")}
+              </Typography>
+              <Chip
+                size="small"
+                label={t("board.taskCount", { count: boardTasks.length })}
+                variant="outlined"
+                sx={{ fontWeight: 600 }}
+              />
+            </Box>
 
-          <Stack direction="row" spacing={1} alignItems="center">
-            <input
-              type="file"
-              ref={fileInputRef}
-              accept=".json"
-              style={{ display: "none" }}
-              onChange={handleImportFile}
-            />
+            <Stack direction="row" spacing={1} alignItems="center">
+              <input
+                id="board-import-file-input"
+                name="boardImportFile"
+                type="file"
+                ref={fileInputRef}
+                accept=".json"
+                style={{ display: "none" }}
+                onChange={handleImportFile}
+                aria-label={t("board.importJSON")}
+              />
 
-            <Button
-              size="small"
-              variant="outlined"
-              startIcon={<MoreHorizIcon />}
-              onClick={(e) => setDataMenuAnchor(e.currentTarget)}
-            >
-              {t("board.dataTools")}
-            </Button>
-
-            <Menu
-              anchorEl={dataMenuAnchor}
-              open={Boolean(dataMenuAnchor)}
-              onClose={() => setDataMenuAnchor(null)}
-            >
-              <MenuItem
-                onClick={() => {
-                  if (activeBoard) exportBoardAsJSON(activeBoard, allTasks);
-                  setDataMenuAnchor(null);
-                }}
-              >
-                <ListItemIcon>
-                  <FileDownloadIcon fontSize="small" />
-                </ListItemIcon>
-                <ListItemText>{t("palette.exportJson")}</ListItemText>
-              </MenuItem>
-              <MenuItem
-                onClick={() => {
-                  if (activeBoard) exportTasksAsCSV(activeBoard, allTasks);
-                  setDataMenuAnchor(null);
-                }}
-              >
-                <ListItemIcon>
-                  <TableChartIcon fontSize="small" />
-                </ListItemIcon>
-                <ListItemText>{t("palette.exportCsv")}</ListItemText>
-              </MenuItem>
-              <MenuItem
-                onClick={() => {
-                  setDataMenuAnchor(null);
-                  fileInputRef.current?.click();
-                }}
-              >
-                <ListItemIcon>
-                  <FileUploadIcon fontSize="small" />
-                </ListItemIcon>
-                <ListItemText>{t("settings.importJSON")}</ListItemText>
-              </MenuItem>
-              <MenuItem
-                onClick={() => {
-                  loadDemoData();
-                  setDataMenuAnchor(null);
-                }}
-              >
-                <ListItemIcon>
-                  <RestartAltIcon fontSize="small" />
-                </ListItemIcon>
-                <ListItemText>{t("board.loadDemo")}</ListItemText>
-              </MenuItem>
-            </Menu>
-          </Stack>
-        </Box>
-
-        {/* Advanced Filters Bar (URL query param bound) */}
-        <Box
-          sx={{
-            p: 1.5,
-            mb: 3,
-            borderRadius: 3,
-            border: 1,
-            borderColor: "divider",
-            bgcolor: "background.paper",
-            display: "flex",
-            flexWrap: "wrap",
-            alignItems: "center",
-            gap: 1.5,
-          }}
-        >
-          {/* Priority filter */}
-          <FormControl size="small" sx={{ minWidth: 120 }}>
-            <InputLabel id="priority-filter-label">{t("priority.label")}</InputLabel>
-            <Select
-              labelId="priority-filter-label"
-              value={priorityFilter}
-              label={t("priority.label")}
-              onChange={(e) => updateFilterParam("priority", e.target.value)}
-            >
-              <MenuItem value="all">{t("priority.all")}</MenuItem>
-              {PRIORITIES.map((p) => (
-                <MenuItem key={p} value={p}>
-                  {t(`priority.${p}`)}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          {/* Label filter */}
-          <FormControl size="small" sx={{ minWidth: 120 }}>
-            <InputLabel id="label-filter-label">{t("board.filterLabel")}</InputLabel>
-            <Select
-              labelId="label-filter-label"
-              value={labelFilter}
-              label={t("board.filterLabel")}
-              onChange={(e) => updateFilterParam("label", e.target.value)}
-            >
-              <MenuItem value="all">{t("board.allLabels")}</MenuItem>
-              {availableLabels.map((lbl) => (
-                <MenuItem key={lbl.id} value={lbl.id}>
-                  {lbl.name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          {/* Due date filter */}
-          <FormControl size="small" sx={{ minWidth: 130 }}>
-            <InputLabel id="due-filter-label">{t("task.dueDate")}</InputLabel>
-            <Select
-              labelId="due-filter-label"
-              value={dueFilter}
-              label={t("task.dueDate")}
-              onChange={(e) => updateFilterParam("due", e.target.value)}
-            >
-              <MenuItem value="all">{t("board.allDates")}</MenuItem>
-              <MenuItem value="today">{t("today.dueToday")}</MenuItem>
-              <MenuItem value="week">{t("board.dueThisWeek")}</MenuItem>
-              <MenuItem value="overdue">{t("today.overdue")}</MenuItem>
-            </Select>
-          </FormControl>
-
-          {/* Sort option */}
-          <FormControl size="small" sx={{ minWidth: 140 }}>
-            <InputLabel id="sort-filter-label">{t("board.sortBy")}</InputLabel>
-            <Select
-              labelId="sort-filter-label"
-              value={sortOption}
-              label={t("board.sortBy")}
-              onChange={(e) => updateFilterParam("sort", e.target.value)}
-            >
-              <MenuItem value="newest">{t("board.sortNewest")}</MenuItem>
-              <MenuItem value="priority">{t("board.sortPriority")}</MenuItem>
-              <MenuItem value="dueDate">{t("board.sortDueDate")}</MenuItem>
-            </Select>
-          </FormControl>
-
-          {/* Reset button */}
-          {hasActiveFilters && (
-            <Tooltip title={t("board.resetFiltersTooltip")}>
               <Button
                 size="small"
-                color="inherit"
-                startIcon={<RestartAltIcon />}
-                onClick={handleResetFilters}
-                sx={{ ml: "auto" }}
+                variant="outlined"
+                startIcon={<MoreHorizIcon />}
+                onClick={(e) => setDataMenuAnchor(e.currentTarget)}
               >
-                {t("common.reset")}
+                {t("board.dataTools")}
               </Button>
-            </Tooltip>
-          )}
-        </Box>
 
-        {/* Today's Agenda Widget */}
-        <TodayWidget tasks={boardTasks} onEdit={openEditTask} />
+              <Menu
+                anchorEl={dataMenuAnchor}
+                open={Boolean(dataMenuAnchor)}
+                onClose={() => setDataMenuAnchor(null)}
+              >
+                <MenuItem
+                  onClick={() => {
+                    if (activeBoard) exportBoardAsJSON(activeBoard, allTasks);
+                    setDataMenuAnchor(null);
+                  }}
+                >
+                  <ListItemIcon>
+                    <FileDownloadIcon fontSize="small" />
+                  </ListItemIcon>
+                  <ListItemText>{t("palette.exportJson")}</ListItemText>
+                </MenuItem>
+                <MenuItem
+                  onClick={() => {
+                    if (activeBoard) exportTasksAsCSV(activeBoard, allTasks);
+                    setDataMenuAnchor(null);
+                  }}
+                >
+                  <ListItemIcon>
+                    <TableChartIcon fontSize="small" />
+                  </ListItemIcon>
+                  <ListItemText>{t("palette.exportCsv")}</ListItemText>
+                </MenuItem>
+                <MenuItem
+                  onClick={() => {
+                    setDataMenuAnchor(null);
+                    fileInputRef.current?.click();
+                  }}
+                >
+                  <ListItemIcon>
+                    <FileUploadIcon fontSize="small" />
+                  </ListItemIcon>
+                  <ListItemText>{t("settings.importJSON")}</ListItemText>
+                </MenuItem>
+                <MenuItem
+                  onClick={() => {
+                    loadDemoData();
+                    setDataMenuAnchor(null);
+                  }}
+                >
+                  <ListItemIcon>
+                    <RestartAltIcon fontSize="small" />
+                  </ListItemIcon>
+                  <ListItemText>{t("board.loadDemo")}</ListItemText>
+                </MenuItem>
+              </Menu>
+            </Stack>
+          </Box>
 
-        {/* Columns Grid */}
-        <Box
-          sx={{
-            display: "grid",
-            gap: 2,
-            gridTemplateColumns: { xs: "1fr", md: "repeat(3, 1fr)" },
-            alignItems: "start",
-          }}
-        >
-          {STATUSES.map((s) => (
-            <Column
-              key={s}
-              status={s}
-              tasks={byStatus[s]}
-              isFiltering={isFiltering}
-              onMove={moveTask}
-              onAdd={openNewTask}
+          {/* Advanced Filters Bar (URL query param bound) */}
+          <Box
+            sx={{
+              p: 1.5,
+              mb: 3,
+              borderRadius: 3,
+              border: 1,
+              borderColor: "divider",
+              bgcolor: "background.paper",
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "center",
+              gap: 1.5,
+            }}
+          >
+            {/* Priority filter */}
+            <FormControl size="small" sx={{ minWidth: 120 }}>
+              <InputLabel id="priority-filter-label" htmlFor="priority-filter-select">
+                {t("priority.label")}
+              </InputLabel>
+              <Select
+                id="priority-filter-select"
+                name="priorityFilter"
+                labelId="priority-filter-label"
+                value={priorityFilter}
+                label={t("priority.label")}
+                onChange={(e) => updateFilterParam("priority", e.target.value)}
+                inputProps={{
+                  id: "priority-filter-select",
+                  name: "priorityFilter",
+                  "aria-labelledby": "priority-filter-label",
+                }}
+              >
+                <MenuItem value="all">{t("priority.all")}</MenuItem>
+                {PRIORITIES.map((p) => (
+                  <MenuItem key={p} value={p}>
+                    {t(`priority.${p}`)}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            {/* Label filter */}
+            <FormControl size="small" sx={{ minWidth: 120 }}>
+              <InputLabel id="label-filter-label" htmlFor="label-filter-select">
+                {t("board.filterLabel")}
+              </InputLabel>
+              <Select
+                id="label-filter-select"
+                name="labelFilter"
+                labelId="label-filter-label"
+                value={labelFilter}
+                label={t("board.filterLabel")}
+                onChange={(e) => updateFilterParam("label", e.target.value)}
+                inputProps={{
+                  id: "label-filter-select",
+                  name: "labelFilter",
+                  "aria-labelledby": "label-filter-label",
+                }}
+              >
+                <MenuItem value="all">{t("board.allLabels")}</MenuItem>
+                {availableLabels.map((lbl) => (
+                  <MenuItem key={lbl.id} value={lbl.id}>
+                    {lbl.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            {/* Due date filter */}
+            <FormControl size="small" sx={{ minWidth: 130 }}>
+              <InputLabel id="due-filter-label" htmlFor="due-filter-select">
+                {t("task.dueDate")}
+              </InputLabel>
+              <Select
+                id="due-filter-select"
+                name="dueFilter"
+                labelId="due-filter-label"
+                value={dueFilter}
+                label={t("task.dueDate")}
+                onChange={(e) => updateFilterParam("due", e.target.value)}
+                inputProps={{
+                  id: "due-filter-select",
+                  name: "dueFilter",
+                  "aria-labelledby": "due-filter-label",
+                }}
+              >
+                <MenuItem value="all">{t("board.allDates")}</MenuItem>
+                <MenuItem value="today">{t("today.dueToday")}</MenuItem>
+                <MenuItem value="week">{t("board.dueThisWeek")}</MenuItem>
+                <MenuItem value="overdue">{t("today.overdue")}</MenuItem>
+              </Select>
+            </FormControl>
+
+            {/* Sort option */}
+            <FormControl size="small" sx={{ minWidth: 140 }}>
+              <InputLabel id="sort-filter-label" htmlFor="sort-filter-select">
+                {t("board.sortBy")}
+              </InputLabel>
+              <Select
+                id="sort-filter-select"
+                name="sortOption"
+                labelId="sort-filter-label"
+                value={sortOption}
+                label={t("board.sortBy")}
+                onChange={(e) => updateFilterParam("sort", e.target.value)}
+                inputProps={{
+                  id: "sort-filter-select",
+                  name: "sortOption",
+                  "aria-labelledby": "sort-filter-label",
+                }}
+              >
+                <MenuItem value="newest">{t("board.sortNewest")}</MenuItem>
+                <MenuItem value="priority">{t("board.sortPriority")}</MenuItem>
+                <MenuItem value="dueDate">{t("board.sortDueDate")}</MenuItem>
+              </Select>
+            </FormControl>
+
+            {/* Reset button */}
+            {hasActiveFilters && (
+              <Tooltip title={t("board.resetFiltersTooltip")}>
+                <Button
+                  size="small"
+                  color="inherit"
+                  startIcon={<RestartAltIcon />}
+                  onClick={handleResetFilters}
+                  sx={{ ml: "auto" }}
+                >
+                  {t("common.reset")}
+                </Button>
+              </Tooltip>
+            )}
+          </Box>
+
+          {/* Today's Agenda Widget */}
+          <TodayWidget tasks={boardTasks} onEdit={openEditTask} />
+
+          {/* Columns Grid */}
+          <Box
+            sx={{
+              display: "grid",
+              gap: 2,
+              gridTemplateColumns: { xs: "1fr", md: "repeat(3, 1fr)" },
+              alignItems: "start",
+            }}
+          >
+            {STATUSES.map((s) => (
+              <Column
+                key={s}
+                status={s}
+                tasks={byStatus[s]}
+                isFiltering={isFiltering}
+                onMove={moveTask}
+                onAdd={openNewTask}
+                onEdit={openEditTask}
+                onDelete={deleteTask}
+              />
+            ))}
+          </Box>
+        </Container>
+
+        {/* Floating Drag Overlay */}
+        <DragOverlay>
+          {activeTask ? (
+            <TaskCard
+              task={activeTask}
               onEdit={openEditTask}
               onDelete={deleteTask}
+              onMove={moveTask}
+              isOverlay
             />
-          ))}
-        </Box>
-      </Container>
+          ) : null}
+        </DragOverlay>
 
-      {/* Floating Drag Overlay */}
-      <DragOverlay>
-        {activeTask ? (
-          <TaskCard
-            task={activeTask}
-            onEdit={openEditTask}
-            onDelete={deleteTask}
-            onMove={moveTask}
-            isOverlay
-          />
-        ) : null}
-      </DragOverlay>
+        {/* Bulk Action Bar */}
+        <BulkActionBar />
+      </DndContext>
 
-      {/* Bulk Action Bar */}
-      <BulkActionBar />
-    </DndContext>
+      <AIAssistant />
+    </>
   );
 }

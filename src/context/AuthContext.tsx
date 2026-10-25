@@ -41,6 +41,12 @@ export function getFriendlyAuthErrorMessage(error: unknown): string {
         return i18n.t("auth.networkFailed");
       case "auth/too-many-requests":
         return i18n.t("auth.tooManyRequests");
+      case "auth/unauthorized-domain":
+        return i18n.t("auth.unauthorizedDomain");
+      case "auth/operation-not-allowed":
+        return i18n.t("auth.operationNotAllowed");
+      case "auth/account-exists-with-different-credential":
+        return i18n.t("auth.accountExistsDifferentCredential");
       default:
         return (
           (error as { message?: string }).message ||
