@@ -79,6 +79,7 @@ interface Props {
   open: boolean;
   task: Task | null;
   defaultStatus: Status;
+  initialDueDate?: string | null;
   onClose: () => void;
   onSave: (input: TaskInput, id?: string) => void;
 }
@@ -93,7 +94,14 @@ const PRESET_COLORS = [
   "#0284C7",
 ];
 
-export default function TaskDialog({ open, task, defaultStatus, onClose, onSave }: Props) {
+export default function TaskDialog({
+  open,
+  task,
+  defaultStatus,
+  initialDueDate,
+  onClose,
+  onSave,
+}: Props) {
   const { t } = useTranslation();
   const availableLabels = useTaskStore((s) => s.availableLabels);
   const addCustomLabel = useTaskStore((s) => s.addCustomLabel);
@@ -141,7 +149,7 @@ export default function TaskDialog({ open, task, defaultStatus, onClose, onSave 
       description: task?.description ?? "",
       status: task?.status ?? defaultStatus,
       priority: task?.priority ?? "medium",
-      dueDate: task?.dueDate ?? "",
+      dueDate: task?.dueDate ?? initialDueDate ?? "",
       estimatedTime: task?.estimatedTime ?? "",
       notes: task?.notes ?? "",
       labels: task?.labels ?? [],
@@ -150,7 +158,7 @@ export default function TaskDialog({ open, task, defaultStatus, onClose, onSave 
     setNewSubtaskTitle("");
     setShowNewLabelForm(false);
     setNewLabelName("");
-  }, [open, task, defaultStatus, reset]);
+  }, [open, task, defaultStatus, initialDueDate, reset]);
 
   const handleAddSubtask = () => {
     const trimmed = newSubtaskTitle.trim();

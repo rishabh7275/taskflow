@@ -37,6 +37,8 @@ import ShortcutsDialog from "./ShortcutsDialog";
 import BoardModal from "./BoardModal";
 import { useTaskStore } from "../store";
 import type { Board } from "../types";
+import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
+
 
 const SIDEBAR_WIDTH = 260;
 
@@ -45,6 +47,7 @@ export default function Layout({ children }: { children?: ReactNode }) {
 
   const navItems = [
     { label: t("nav.board"), path: "/board", icon: DashboardIcon },
+    { label: t("nav.calendar"), path: "/calendar", icon: CalendarMonthIcon },
     { label: t("nav.analytics"), path: "/analytics", icon: BarChartIcon },
     { label: t("nav.settings"), path: "/settings", icon: SettingsIcon },
   ];
@@ -395,6 +398,7 @@ export default function Layout({ children }: { children?: ReactNode }) {
           open={dialog.open}
           task={dialog.task}
           defaultStatus={dialog.status}
+          initialDueDate={dialog.initialDueDate}
           onClose={closeDialog}
           onSave={saveTask}
         />

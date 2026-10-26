@@ -13,10 +13,15 @@ interface ApiResponse {
 }
 
 interface TaskSummary {
-  title?: string;
-  status?: string;
-  priority?: string;
-  dueDate?: number | null;
+  title: string;
+  description?: string;
+  status: string;
+  priority: string;
+  dueDate: string | null;
+  labels?: string[];
+  subtasks?: { title: string; completed: boolean }[];
+  estimatedTime?: string;
+  notes?: string;
 }
 
 function getGeminiApiKey(): string | undefined {
@@ -49,7 +54,11 @@ function getGeminiApiKey(): string | undefined {
   return undefined;
 }
 
-const CANDIDATE_MODELS = ["gemini-3.5-flash-lite", "gemini-3.5-flash"];
+const CANDIDATE_MODELS = [
+  "gemini-3.5-flash-lite",
+  "gemini-3.5-flash",
+  "gemini-3.8-flash",
+];
 
 async function callGeminiModelWithTimeout(
   ai: GoogleGenAI,
@@ -107,9 +116,14 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
         ? (rawBody as Record<string, unknown>)
         : {};
 
-    const { message, tasks } = body;
+    const { message, tasks, mode } = body;
 
-    if (!message || typeof message !== "string" || !message.trim()) {
+    const queryMessage = typeof message === "string" ? message.trim() : "";
+    const isPlannerMode =
+      mode === "planner" ||
+      /plan my day|what should i do first|analyze my pending tasks|daily plan|make a plan/i.test(queryMessage);
+
+    if (!queryMessage && !isPlannerMode) {
       return res.status(400).json({ error: "Please enter a valid message." });
     }
 
@@ -125,32 +139,102 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
 
     const ai = new GoogleGenAI({ apiKey });
 
-    // Format tasks for concise context
+    // Format tasks for comprehensive planning context
     const sanitizedTasks: TaskSummary[] = Array.isArray(tasks)
       ? tasks.slice(0, 50).map((t: unknown) => {
           if (t && typeof t === "object") {
             const item = t as Record<string, unknown>;
+            const labels = Array.isArray(item.labels)
+              ? item.labels
+                  .map((l: unknown) =>
+                    l && typeof l === "object" && "name" in l
+                      ? String((l as { name: unknown }).name).trim()
+                      : ""
+                  )
+                  .filter(Boolean)
+              : [];
+            const subtasks = Array.isArray(item.subtasks)
+              ? item.subtasks
+                  .filter((s): s is Record<string, unknown> => Boolean(s && typeof s === "object"))
+                  .map((s) => ({
+                    title: typeof s.title === "string" ? s.title.slice(0, 100).trim() : "",
+                    completed: Boolean(s.completed),
+                  }))
+                  .filter((s) => s.title)
+              : [];
+
             return {
-              title: typeof item.title === "string" ? item.title : "Untitled",
+              title: typeof item.title === "string" && item.title.trim() ? item.title.slice(0, 150).trim() : "Untitled",
+              description:
+                typeof item.description === "string" && item.description.trim()
+                  ? item.description.slice(0, 300).trim()
+                  : undefined,
               status: typeof item.status === "string" ? item.status : "todo",
               priority: typeof item.priority === "string" ? item.priority : "medium",
-              dueDate: typeof item.dueDate === "number" ? item.dueDate : null,
+              dueDate: typeof item.dueDate === "string" && item.dueDate.trim() ? item.dueDate.trim() : null,
+              labels: labels.length > 0 ? labels : undefined,
+              subtasks: subtasks.length > 0 ? subtasks : undefined,
+              estimatedTime:
+                typeof item.estimatedTime === "string" && item.estimatedTime.trim()
+                  ? item.estimatedTime.slice(0, 50).trim()
+                  : undefined,
+              notes: typeof item.notes === "string" && item.notes.trim() ? item.notes.slice(0, 300).trim() : undefined,
             };
           }
-          return { title: "Untitled", status: "todo", priority: "medium" };
+          return { title: "Untitled", status: "todo", priority: "medium", dueDate: null };
         })
       : [];
 
+    const pendingTasks = sanitizedTasks.filter((t) => t.status !== "done");
+
+    // If planner requested and there are no tasks at all or no pending tasks, return helpful friendly response
+    if (isPlannerMode && sanitizedTasks.length === 0) {
+      return res.status(200).json({
+        reply:
+          "### 📋 No Tasks Found\n\nYour board does not have any tasks yet! To generate an AI Smart Plan:\n1. Click **New Task** or load demo data from **Data Tools**.\n2. Add titles, priorities, and due dates.\n3. Re-run **AI Smart Planner** to receive your custom daily schedule and priorities.",
+      });
+    }
+
+    if (isPlannerMode && pendingTasks.length === 0) {
+      return res.status(200).json({
+        reply:
+          "### 🎉 All Caught Up!\n\nAll tasks on this board are already marked as **Done**! You have no pending items for today.\n\n- **Great job finishing your work!**\n- If you have new goals for today, add them using **New Task** and re-run the planner whenever you're ready.",
+      });
+    }
+
+    const todayDate = new Date().toISOString().split("T")[0];
+
     console.log(
-      `[TaskFlow AI] Incoming request: messageLength=${message.trim().length}, taskCount=${sanitizedTasks.length}`
+      `[TaskFlow AI] Incoming request: message="${queryMessage}", taskCount=${sanitizedTasks.length}, pendingCount=${pendingTasks.length}, isPlanner=${isPlannerMode}`
     );
 
-    const systemInstruction = `You are TaskFlow AI, an intelligent, helpful task management assistant integrated directly into the user's TaskFlow board.
-Help the user organize their day, prioritize work, break complex tasks into actionable subtasks, and overcome procrastination.
-Keep answers structured, concise, and immediately practical.
+    const systemInstruction = `You are TaskFlow AI Smart Planner, an intelligent, practical, and highly organized task planning assistant.
+Today's date is ${todayDate} (ISO format YYYY-MM-DD).
 
-Current tasks on the user's board:
-${JSON.stringify(sanitizedTasks, null, 2)}`;
+Current tasks on user's active board:
+${JSON.stringify(sanitizedTasks, null, 2)}
+
+ROLE & BEHAVIORAL RULES:
+1. When asked to plan the day, prioritize tasks, or when mode is "planner", organize your response into these 4 clear sections:
+   ### 1. Today's Priorities
+   Identify the top 2-3 most critical tasks to tackle first today based on priority (high > medium > low), status, and due dates.
+   ### 2. Recommended Task Order
+   Provide a sequential, step-by-step order to complete the pending tasks, explaining briefly why each task should be tackled in that order.
+   ### 3. Deadline Warnings
+   Highlight any overdue tasks (dueDate < "${todayDate}" and status is not "done") and tasks due today ("${todayDate}") or approaching soon. If all deadlines are in the clear, explicitly state so.
+   ### 4. Suggested Next Steps
+   Provide actionable steps for complex tasks (mentioning subtasks if available). Include a realistic suggested schedule only when estimated times are available. Clearly highlight tasks that can reasonably be postponed to avoid cognitive overload.
+
+2. ACCURACY & DATA INTEGRITY:
+- Base all analysis strictly on the tasks provided above.
+- NEVER invent deadlines, completion status, estimated durations, or fake tasks.
+- If information like time estimate or due date is absent, state that no deadline or estimate was specified.
+- Clearly state any assumptions.
+- You are an advisory planner: you must NEVER claim or imply that you have modified, created, completed, or deleted any task in the user's database.`;
+
+    const promptMessage =
+      queryMessage ||
+      "Please analyze my current tasks and generate my daily smart plan following the 4 required sections.";
 
     let reply = "";
     let lastError: unknown = null;
@@ -162,7 +246,7 @@ ${JSON.stringify(sanitizedTasks, null, 2)}`;
         reply = await callGeminiModelWithTimeout(
           ai,
           model,
-          message.trim(),
+          promptMessage,
           systemInstruction,
           15000
         );

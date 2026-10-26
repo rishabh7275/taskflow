@@ -1,4 +1,5 @@
 import AIAssistant from "../components/AIAssistant";
+import SmartPlannerDialog from "../components/SmartPlannerDialog";
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -16,6 +17,7 @@ import {
   Stack,
   Tooltip,
   Typography,
+  alpha,
 } from "@mui/material";
 import {
   DndContext,
@@ -35,6 +37,7 @@ import FileUploadIcon from "@mui/icons-material/FileUploadOutlined";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import TableChartIcon from "@mui/icons-material/TableChartOutlined";
 import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
+import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import { useSearchParams } from "react-router-dom";
 import Column from "../components/Column";
 import StatsBar from "../components/StatsBar";
@@ -73,6 +76,7 @@ export default function BoardPage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [dataMenuAnchor, setDataMenuAnchor] = useState<HTMLElement | null>(null);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
+  const [smartPlannerOpen, setSmartPlannerOpen] = useState(false);
 
   // Read URL query params with defaults
   const priorityFilter = (searchParams.get("priority") as PriorityFilter) || "all";
@@ -331,7 +335,28 @@ export default function BoardPage() {
               />
             </Box>
 
-            <Stack direction="row" spacing={1} alignItems="center">
+            <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+              <Button
+                size="small"
+                variant="contained"
+                color="primary"
+                startIcon={<AutoAwesomeRoundedIcon />}
+                onClick={() => setSmartPlannerOpen(true)}
+                sx={{
+                  fontWeight: 700,
+                  borderRadius: 2,
+                  textTransform: "none",
+                  px: 1.75,
+                  py: 0.6,
+                  boxShadow: (theme) => `0 4px 14px ${alpha(theme.palette.primary.main, 0.35)}`,
+                  "&:hover": {
+                    boxShadow: (theme) => `0 6px 20px ${alpha(theme.palette.primary.main, 0.45)}`,
+                  },
+                }}
+              >
+                {t("board.aiSmartPlanner", { defaultValue: "AI Smart Planner" })}
+              </Button>
+
               <input
                 id="board-import-file-input"
                 name="boardImportFile"
@@ -584,6 +609,12 @@ export default function BoardPage() {
       </DndContext>
 
       <AIAssistant />
+      <SmartPlannerDialog
+        open={smartPlannerOpen}
+        onClose={() => setSmartPlannerOpen(false)}
+        tasks={boardTasks}
+        boardName={activeBoard?.name}
+      />
     </>
   );
 }

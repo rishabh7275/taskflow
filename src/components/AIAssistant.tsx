@@ -1,8 +1,9 @@
-import { useState, useRef, useEffect, type FormEvent } from "react";
+import { useState, useRef, useEffect, useMemo, type FormEvent } from "react";
 import { useTaskStore } from "../store";
 import {
     Box,
     Button,
+    Chip,
     Fab,
     IconButton,
     Paper,
@@ -10,6 +11,7 @@ import {
     Typography,
     CircularProgress,
     Avatar,
+    alpha,
 } from "@mui/material";
 import SmartToyRoundedIcon from "@mui/icons-material/SmartToyRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
@@ -28,7 +30,12 @@ export default function AIAssistant() {
     const [input, setInput] = useState("");
     const [loading, setLoading] = useState(false);
     const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null);
-    const tasks = useTaskStore((s) => s.tasks);
+    const allTasks = useTaskStore((s) => s.tasks);
+    const activeBoardId = useTaskStore((s) => s.activeBoardId);
+    const tasks = useMemo(() => {
+        const boardSpecific = allTasks.filter((t) => t.boardId === activeBoardId);
+        return boardSpecific.length > 0 ? boardSpecific : allTasks;
+    }, [allTasks, activeBoardId]);
 
     const abortControllerRef = useRef<AbortController | null>(null);
     const isSubmittingRef = useRef(false);
@@ -262,7 +269,79 @@ export default function AIAssistant() {
                                     overflowWrap: "anywhere",
                                 }}
                             >
-                                <Typography variant="body2">{message.text}</Typography>
+                                {message.role === "user" ? (
+                                    <Typography variant="body2">{message.text}</Typography>
+                                ) : (
+                                    <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+                                        {message.text.split("\n").map((line, idx) => {
+                                            const trimmed = line.trim();
+                                            if (!trimmed) return <Box key={idx} sx={{ height: 4 }} />;
+
+                                            if (trimmed.startsWith("### ")) {
+                                                return (
+                                                    <Typography
+                                                        key={idx}
+                                                        variant="subtitle2"
+                                                        fontWeight={800}
+                                                        color="primary.main"
+                                                        sx={{ mt: idx === 0 ? 0 : 1 }}
+                                                    >
+                                                        {trimmed.replace(/^###\s+/, "")}
+                                                    </Typography>
+                                                );
+                                            }
+
+                                            const isBullet =
+                                                trimmed.startsWith("* ") ||
+                                                trimmed.startsWith("- ") ||
+                                                /^\d+\.\s/.test(trimmed);
+                                            const clean = trimmed.replace(/^[\*\-]\s+/, "").replace(/^\d+\.\s+/, "");
+                                            const parts = clean.split(/(\*\*[^*]+\*\*)/g);
+
+                                            return (
+                                                <Box
+                                                    key={idx}
+                                                    sx={{
+                                                        display: "flex",
+                                                        alignItems: "flex-start",
+                                                        gap: 0.75,
+                                                        pl: isBullet ? 1 : 0,
+                                                    }}
+                                                >
+                                                    {isBullet && (
+                                                        <Box
+                                                            component="span"
+                                                            sx={{
+                                                                width: 5,
+                                                                height: 5,
+                                                                borderRadius: "50%",
+                                                                bgcolor: "primary.main",
+                                                                mt: 0.85,
+                                                                flexShrink: 0,
+                                                            }}
+                                                        />
+                                                    )}
+                                                    <Typography variant="body2" sx={{ lineHeight: 1.5 }}>
+                                                        {parts.map((p, pIdx) => {
+                                                            if (p.startsWith("**") && p.endsWith("**")) {
+                                                                return (
+                                                                    <Box
+                                                                        component="strong"
+                                                                        key={pIdx}
+                                                                        sx={{ fontWeight: 700 }}
+                                                                    >
+                                                                        {p.slice(2, -2)}
+                                                                    </Box>
+                                                                );
+                                                            }
+                                                            return p;
+                                                        })}
+                                                    </Typography>
+                                                </Box>
+                                            );
+                                        })}
+                                    </Box>
+                                )}
                                 {message.isError && lastFailedMessage && index === messages.length - 1 && (
                                     <Button
                                         size="small"
@@ -297,6 +376,49 @@ export default function AIAssistant() {
                             </Box>
                         )}
                         <div ref={messagesEndRef} />
+                    </Box>
+
+                    {/* Quick Smart Planner Prompts */}
+                    <Box
+                        sx={{
+                            display: "flex",
+                            gap: 0.75,
+                            px: 1.5,
+                            py: 1,
+                            overflowX: "auto",
+                            borderTop: 1,
+                            borderColor: "divider",
+                            bgcolor: (th) => alpha(th.palette.background.paper, 0.95),
+                            "&::-webkit-scrollbar": { display: "none" },
+                        }}
+                    >
+                        {[
+                            "Plan my day",
+                            "What should I do first?",
+                            "Analyze my pending tasks",
+                            "Make a plan for my overdue tasks",
+                        ].map((promptText) => (
+                            <Chip
+                                key={promptText}
+                                size="small"
+                                label={promptText}
+                                onClick={() => sendMessage(undefined, promptText)}
+                                disabled={loading}
+                                sx={{
+                                    fontSize: 11,
+                                    fontWeight: 600,
+                                    cursor: "pointer",
+                                    bgcolor: (th) => alpha(th.palette.primary.main, 0.08),
+                                    color: "primary.main",
+                                    borderColor: (th) => alpha(th.palette.primary.main, 0.2),
+                                    border: 1,
+                                    flexShrink: 0,
+                                    "&:hover": {
+                                        bgcolor: (th) => alpha(th.palette.primary.main, 0.16),
+                                    },
+                                }}
+                            />
+                        ))}
                     </Box>
 
                     <Box

@@ -12,6 +12,7 @@ export interface DialogState {
   open: boolean;
   task: Task | null;
   status: Status;
+  initialDueDate?: string | null;
 }
 
 export interface Toast {
@@ -64,7 +65,7 @@ export interface TaskStore {
   toggleMode: () => void;
   setQuery: (query: string) => void;
   setFilter: (filter: PriorityFilter) => void;
-  openNewTask: (status?: Status) => void;
+  openNewTask: (status?: Status, initialDueDate?: string | null) => void;
   openEditTask: (task: Task) => void;
   closeDialog: () => void;
   saveTask: (input: TaskInput, id?: string) => void;
@@ -401,14 +402,14 @@ export const useTaskStore = create<TaskStore>()(
 
       setFilter: (filter) => set({ filter }),
 
-      openNewTask: (status = "todo") =>
-        set({ dialog: { open: true, task: null, status } }),
+      openNewTask: (status = "todo", initialDueDate = null) =>
+        set({ dialog: { open: true, task: null, status, initialDueDate } }),
 
       openEditTask: (task) =>
-        set({ dialog: { open: true, task, status: task.status } }),
+        set({ dialog: { open: true, task, status: task.status, initialDueDate: null } }),
 
       closeDialog: () =>
-        set((state) => ({ dialog: { ...state.dialog, open: false } })),
+        set((state) => ({ dialog: { ...state.dialog, open: false, initialDueDate: null } })),
 
       saveTask: (input, id) => {
         const { tasks, past, activeBoardId } = get();

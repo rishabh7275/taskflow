@@ -39,6 +39,7 @@ const resources = {
       },
       nav: {
         board: "Board",
+        calendar: "Calendar",
         analytics: "Analytics",
         settings: "Settings",
         shortcuts: "Shortcuts (?)",
@@ -120,6 +121,7 @@ const resources = {
         sortDueDate: "Due Date (Earliest)",
         resetFiltersTooltip: "Reset all filters",
         loadDemo: "Load Demo Tasks",
+        aiSmartPlanner: "AI Smart Planner",
       },
       column: {
         addTaskTo: "Add task to {{status}}",
@@ -361,6 +363,7 @@ const resources = {
       },
       nav: {
         board: "बोर्ड",
+        calendar: "कैलेंडर",
         analytics: "एनालिटिक्स",
         settings: "सेटिंग्स",
         shortcuts: "शॉर्टकट (?)",
@@ -442,6 +445,7 @@ const resources = {
         sortDueDate: "नियत तारीख (पहले से बाद)",
         resetFiltersTooltip: "सभी फ़िल्टर रीसेट करें",
         loadDemo: "डेमो टास्क लोड करें",
+        aiSmartPlanner: "एआई स्मार्ट प्लानर",
       },
       column: {
         addTaskTo: "{{status}} में कार्य जोड़ें",

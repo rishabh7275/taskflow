@@ -19,6 +19,7 @@ import SearchIcon from "@mui/icons-material/Search";
 import DashboardIcon from "@mui/icons-material/DashboardOutlined";
 import BarChartIcon from "@mui/icons-material/BarChartOutlined";
 import SettingsIcon from "@mui/icons-material/SettingsOutlined";
+import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import AddIcon from "@mui/icons-material/Add";
 import DarkModeIcon from "@mui/icons-material/DarkModeOutlined";
 import LightModeIcon from "@mui/icons-material/LightModeOutlined";
@@ -90,6 +91,17 @@ export default function CommandPalette() {
       icon: <DashboardIcon fontSize="small" />,
       action: () => {
         navigate("/board");
+        setOpen(false);
+      },
+    },
+    {
+      id: "nav-calendar",
+      category: t("palette.catNavigation"),
+      title: t("palette.goCalendar", { defaultValue: "Go to Calendar" }),
+      subtitle: t("palette.goCalendarDesc", { defaultValue: "View scheduled tasks on monthly calendar" }),
+      icon: <CalendarMonthIcon fontSize="small" />,
+      action: () => {
+        navigate("/calendar");
         setOpen(false);
       },
     },

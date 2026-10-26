@@ -13,6 +13,7 @@ import i18n from "./lib/i18n";
 
 const LoginPage = lazy(() => import("./pages/LoginPage"));
 const BoardPage = lazy(() => import("./pages/BoardPage"));
+const CalendarPage = lazy(() => import("./pages/CalendarPage"));
 const AnalyticsPage = lazy(() => import("./pages/AnalyticsPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
@@ -63,6 +64,14 @@ function AppContent() {
             element={
               <Suspense fallback={<PageSkeleton />}>
                 <AnalyticsPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/calendar"
+            element={
+              <Suspense fallback={<PageSkeleton />}>
+                <CalendarPage />
               </Suspense>
             }
           />
