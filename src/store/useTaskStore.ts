@@ -1,12 +1,23 @@
 import { create } from "zustand";
 import { persist, createJSONStorage, type StateStorage } from "zustand/middleware";
 import type { PaletteMode } from "@mui/material";
-import type { Priority, Status, Task, TaskInput, Label, Board, ThemeMode, Density, AccentColor, Language } from "../types";
+import type { Priority, Status, Task, TaskInput, Label, Board, ThemeMode, Density, AccentColor, Language, AppNotification, NotificationSettings } from "../types";
 import { createSeedTasks, DEFAULT_PRESET_LABELS, DEFAULT_BOARD } from "../seed";
 import i18n from "../lib/i18n";
+import { todayISO } from "../utils";
+import { createNextOccurrence } from "../lib/recurrence";
 
 export type PriorityFilter = "all" | Priority;
 export type SyncStatus = "idle" | "saving" | "saved" | "error";
+
+export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
+  enabled: true,
+  overdueAlerts: true,
+  dueTodayAlerts: true,
+  upcomingAlerts: true,
+  upcomingLeadDays: 1,
+  browserNotifications: false,
+};
 
 export interface DialogState {
   open: boolean;
@@ -97,6 +108,17 @@ export interface TaskStore {
   setIsDataLoaded: (loaded: boolean) => void;
   loadUserData: (data: Partial<TaskStore>) => void;
   loadDemoData: () => void;
+
+  // Notifications & Reminders
+  notifications: AppNotification[];
+  dismissedNotificationIds: string[];
+  notificationSettings: NotificationSettings;
+  markNotificationRead: (id: string) => void;
+  markAllNotificationsRead: () => void;
+  clearNotification: (id: string) => void;
+  clearAllNotifications: () => void;
+  updateNotificationSettings: (settings: Partial<NotificationSettings>) => void;
+  syncReminders: () => void;
 }
 
 export function migrateTask(raw: Partial<Task>): Task {
@@ -120,11 +142,27 @@ export function migrateTask(raw: Partial<Task>): Task {
       : [],
     estimatedTime: raw.estimatedTime ?? "",
     notes: raw.notes ?? "",
+    recurrence: raw.recurrence ?? null,
+    recurringParentId: raw.recurringParentId ?? null,
+    nextOccurrenceCreated: Boolean(raw.nextOccurrenceCreated),
   };
 }
 
 export function migrateTasksArray(arr: unknown[]): Task[] {
   return arr.map((item) => migrateTask((item || {}) as Partial<Task>));
+}
+
+function checkAndSpawnRecurring(task: Task): { updatedTask: Task; nextOccurrence: Task | null } {
+  if (
+    task.recurrence &&
+    task.recurrence.frequency !== "none" &&
+    !task.nextOccurrenceCreated
+  ) {
+    const updatedTask: Task = { ...task, nextOccurrenceCreated: true };
+    const nextOccurrence = createNextOccurrence(updatedTask);
+    return { updatedTask, nextOccurrence };
+  }
+  return { updatedTask: task, nextOccurrence: null };
 }
 
 const LEGACY_TASKS_KEY = "taskflow.tasks";
@@ -149,6 +187,9 @@ export function clearInMemoryData(): void {
     toast: null,
     syncStatus: "idle",
     isDataLoaded: false,
+    notifications: [],
+    dismissedNotificationIds: [],
+    notificationSettings: DEFAULT_NOTIFICATION_SETTINGS,
   });
   try {
     localStorage.removeItem("taskflow-storage");
@@ -214,6 +255,9 @@ export const useTaskStore = create<TaskStore>()(
       isCommandPaletteOpen: false,
       syncStatus: "idle",
       isDataLoaded: false,
+      notifications: [],
+      dismissedNotificationIds: [],
+      notificationSettings: DEFAULT_NOTIFICATION_SETTINGS,
 
       setSyncStatus: (syncStatus) =>
         set((state) => (state.syncStatus === syncStatus ? state : { syncStatus })),
@@ -257,6 +301,13 @@ export const useTaskStore = create<TaskStore>()(
           accentColor: data.accentColor ?? get().accentColor,
           density: data.density ?? get().density,
           language: data.language ?? get().language,
+          notificationSettings: data.notificationSettings
+            ? { ...DEFAULT_NOTIFICATION_SETTINGS, ...data.notificationSettings }
+            : get().notificationSettings,
+          notifications: Array.isArray(data.notifications) ? data.notifications : get().notifications,
+          dismissedNotificationIds: Array.isArray(data.dismissedNotificationIds)
+            ? data.dismissedNotificationIds
+            : get().dismissedNotificationIds,
           selectedTaskIds: [],
           past: [],
           future: [],
@@ -416,34 +467,54 @@ export const useTaskStore = create<TaskStore>()(
         const nextPast = [...past.slice(-(MAX_HISTORY - 1)), tasks];
 
         if (id) {
-          set((state) => ({
+          const currentTask = tasks.find((t) => t.id === id);
+          const wasDone = currentTask?.status === "done";
+          const willBeDone = input.status === "done";
+          const becameDone = !wasDone && willBeDone;
+
+          let updatedTask: Task = {
+            ...(currentTask || (input as Task)),
+            ...input,
+            completedAt: willBeDone ? (wasDone ? currentTask?.completedAt : Date.now()) : null,
+          };
+
+          let nextOccurrence: Task | null = null;
+          if (becameDone) {
+            const res = checkAndSpawnRecurring(updatedTask);
+            updatedTask = res.updatedTask;
+            nextOccurrence = res.nextOccurrence;
+          }
+
+          const updatedTasks = tasks.map((t) => (t.id === id ? updatedTask : t));
+          if (nextOccurrence) {
+            updatedTasks.unshift(nextOccurrence);
+          }
+
+          set({
             past: nextPast,
             future: [],
-            tasks: state.tasks.map((t) => {
-              if (t.id !== id) return t;
-              const willBeDone = input.status === "done";
-              const wasDone = t.status === "done";
-              return {
-                ...t,
-                ...input,
-                completedAt: willBeDone ? (wasDone ? t.completedAt : Date.now()) : null,
-              };
-            }),
+            tasks: updatedTasks,
             toast: { message: i18n.t("toast.taskUpdated"), undo: () => get().undo() },
-            dialog: { ...state.dialog, open: false },
-          }));
+            dialog: { ...get().dialog, open: false },
+          });
         } else {
-          const newTask: Task = {
+          let newTask: Task = {
             ...input,
             id: crypto.randomUUID(),
             boardId: activeBoardId,
             createdAt: Date.now(),
             completedAt: input.status === "done" ? Date.now() : null,
           };
+          let newNextOccurrence: Task | null = null;
+          if (input.status === "done") {
+            const res = checkAndSpawnRecurring(newTask);
+            newTask = res.updatedTask;
+            newNextOccurrence = res.nextOccurrence;
+          }
           set((state) => ({
             past: nextPast,
             future: [],
-            tasks: [newTask, ...state.tasks],
+            tasks: newNextOccurrence ? [newNextOccurrence, newTask, ...state.tasks] : [newTask, ...state.tasks],
             toast: { message: i18n.t("toast.taskAdded"), undo: () => get().undo() },
             dialog: { ...state.dialog, open: false },
           }));
@@ -457,14 +528,31 @@ export const useTaskStore = create<TaskStore>()(
 
         const nextPast = [...past.slice(-(MAX_HISTORY - 1)), tasks];
         const isDone = status === "done";
+        const wasDone = task.status === "done";
+        const becameDone = !wasDone && isDone;
+
+        let updatedTask: Task = {
+          ...task,
+          status,
+          completedAt: isDone ? task.completedAt || Date.now() : null,
+        };
+
+        let nextOccurrence: Task | null = null;
+        if (becameDone) {
+          const res = checkAndSpawnRecurring(updatedTask);
+          updatedTask = res.updatedTask;
+          nextOccurrence = res.nextOccurrence;
+        }
+
+        const updatedTasks = tasks.map((t) => (t.id === id ? updatedTask : t));
+        if (nextOccurrence) {
+          updatedTasks.unshift(nextOccurrence);
+        }
+
         set({
           past: nextPast,
           future: [],
-          tasks: tasks.map((t) =>
-            t.id === id
-              ? { ...t, status, completedAt: isDone ? t.completedAt || Date.now() : null }
-              : t
-          ),
+          tasks: updatedTasks,
           toast: {
             message: i18n.t("toast.movedTo", { status: i18n.t(`status.${status}`) }),
             undo: () => get().undo(),
@@ -480,11 +568,21 @@ export const useTaskStore = create<TaskStore>()(
         const nextPast = [...past.slice(-(MAX_HISTORY - 1)), tasks];
         const withoutActive = tasks.filter((t) => t.id !== activeId);
         const isDone = targetStatus === "done";
-        const updatedTask = {
+        const wasDone = activeTask.status === "done";
+        const becameDone = !wasDone && isDone;
+
+        let updatedTask: Task = {
           ...activeTask,
           status: targetStatus,
           completedAt: isDone ? activeTask.completedAt || Date.now() : null,
         };
+
+        let nextOccurrence: Task | null = null;
+        if (becameDone) {
+          const res = checkAndSpawnRecurring(updatedTask);
+          updatedTask = res.updatedTask;
+          nextOccurrence = res.nextOccurrence;
+        }
 
         if (typeof targetIndex === "number" && targetIndex >= 0) {
           const colTasks = withoutActive.filter(
@@ -499,6 +597,10 @@ export const useTaskStore = create<TaskStore>()(
           }
         } else {
           withoutActive.push(updatedTask);
+        }
+
+        if (nextOccurrence) {
+          withoutActive.unshift(nextOccurrence);
         }
 
         set({
@@ -521,11 +623,26 @@ export const useTaskStore = create<TaskStore>()(
 
         const nextPast = [...past.slice(-(MAX_HISTORY - 1)), tasks];
         const updated = [...tasks];
-        const [moved] = updated.splice(activeIdx, 1);
+        let [moved] = updated.splice(activeIdx, 1);
         const targetStatus = tasks[overIdx].status;
+        const wasDone = moved.status === "done";
+        const isDone = targetStatus === "done";
+        const becameDone = !wasDone && isDone;
+
         moved.status = targetStatus;
-        moved.completedAt = targetStatus === "done" ? moved.completedAt || Date.now() : null;
+        moved.completedAt = isDone ? moved.completedAt || Date.now() : null;
+
+        let nextOccurrence: Task | null = null;
+        if (becameDone) {
+          const res = checkAndSpawnRecurring(moved);
+          moved = res.updatedTask;
+          nextOccurrence = res.nextOccurrence;
+        }
+
         updated.splice(overIdx, 0, moved);
+        if (nextOccurrence) {
+          updated.unshift(nextOccurrence);
+        }
 
         set({
           past: nextPast,
@@ -618,14 +735,24 @@ export const useTaskStore = create<TaskStore>()(
         const nextPast = [...past.slice(-(MAX_HISTORY - 1)), tasks];
         const count = selectedTaskIds.length;
         const isDone = status === "done";
+        const spawnedTasks: Task[] = [];
+        const updatedTasks = tasks.map((t) => {
+          if (!selectedTaskIds.includes(t.id)) return t;
+          const wasDone = t.status === "done";
+          const becameDone = !wasDone && isDone;
+          let u: Task = { ...t, status, completedAt: isDone ? t.completedAt || Date.now() : null };
+          if (becameDone) {
+            const res = checkAndSpawnRecurring(u);
+            u = res.updatedTask;
+            if (res.nextOccurrence) spawnedTasks.push(res.nextOccurrence);
+          }
+          return u;
+        });
+
         set({
           past: nextPast,
           future: [],
-          tasks: tasks.map((t) =>
-            selectedTaskIds.includes(t.id)
-              ? { ...t, status, completedAt: isDone ? t.completedAt || Date.now() : null }
-              : t
-          ),
+          tasks: [...spawnedTasks, ...updatedTasks],
           selectedTaskIds: [],
           toast: {
             message: i18n.t(count > 1 ? "toast.bulkMoved_other" : "toast.bulkMoved_one", {
@@ -713,6 +840,154 @@ export const useTaskStore = create<TaskStore>()(
       },
 
       setToast: (toast) => set({ toast }),
+
+      markNotificationRead: (id) =>
+        set((state) => ({
+          notifications: state.notifications.map((n) => (n.id === id ? { ...n, read: true } : n)),
+        })),
+
+      markAllNotificationsRead: () =>
+        set((state) => ({
+          notifications: state.notifications.map((n) => ({ ...n, read: true })),
+        })),
+
+      clearNotification: (id) =>
+        set((state) => ({
+          notifications: state.notifications.filter((n) => n.id !== id),
+          dismissedNotificationIds: state.dismissedNotificationIds.includes(id)
+            ? state.dismissedNotificationIds
+            : [...state.dismissedNotificationIds, id],
+        })),
+
+      clearAllNotifications: () =>
+        set((state) => ({
+          dismissedNotificationIds: Array.from(
+            new Set([...state.dismissedNotificationIds, ...state.notifications.map((n) => n.id)])
+          ),
+          notifications: [],
+        })),
+
+      updateNotificationSettings: (patch) => {
+        set((state) => ({
+          notificationSettings: { ...state.notificationSettings, ...patch },
+        }));
+        get().syncReminders();
+      },
+
+      syncReminders: () => {
+        const { tasks, notifications, dismissedNotificationIds, notificationSettings } = get();
+        if (!notificationSettings.enabled) {
+          return;
+        }
+
+        const today = todayISO();
+        const dismissedSet = new Set(dismissedNotificationIds);
+
+        // Filter out notifications for tasks that are completed or deleted
+        const validNotifications = notifications.filter((n) => {
+          if (!n.taskId) return true;
+          const task = tasks.find((t) => t.id === n.taskId);
+          if (!task || task.status === "done") return false;
+          return true;
+        });
+
+        const existingIds = new Set(validNotifications.map((n) => n.id));
+        const newlyCreated: AppNotification[] = [];
+
+        for (const task of tasks) {
+          if (task.status === "done" || !task.dueDate || !task.dueDate.trim()) {
+            continue;
+          }
+
+          const dueStr = task.dueDate.trim();
+
+          // 1. Overdue reminder
+          if (notificationSettings.overdueAlerts && dueStr < today) {
+            const notifId = `overdue-${task.id}-${dueStr}`;
+            if (!existingIds.has(notifId) && !dismissedSet.has(notifId)) {
+              const notif: AppNotification = {
+                id: notifId,
+                type: "overdue",
+                title: `Overdue: ${task.title}`,
+                message: `Due date was ${dueStr}. Task is still pending.`,
+                timestamp: Date.now(),
+                read: false,
+                taskId: task.id,
+                boardId: task.boardId,
+              };
+              validNotifications.unshift(notif);
+              newlyCreated.push(notif);
+              existingIds.add(notifId);
+            }
+          }
+          // 2. Due Today reminder
+          else if (notificationSettings.dueTodayAlerts && dueStr === today) {
+            const notifId = `due_today-${task.id}-${dueStr}`;
+            if (!existingIds.has(notifId) && !dismissedSet.has(notifId)) {
+              const notif: AppNotification = {
+                id: notifId,
+                type: "due_today",
+                title: `Due Today: ${task.title}`,
+                message: `This task is due for completion today.`,
+                timestamp: Date.now(),
+                read: false,
+                taskId: task.id,
+                boardId: task.boardId,
+              };
+              validNotifications.unshift(notif);
+              newlyCreated.push(notif);
+              existingIds.add(notifId);
+            }
+          }
+          // 3. Upcoming deadline reminder
+          else if (notificationSettings.upcomingAlerts && dueStr > today) {
+            const dueTime = new Date(`${dueStr}T00:00:00`).getTime();
+            const todayTime = new Date(`${today}T00:00:00`).getTime();
+            const diffDays = Math.round((dueTime - todayTime) / (1000 * 60 * 60 * 24));
+
+            if (diffDays <= notificationSettings.upcomingLeadDays && diffDays > 0) {
+              const notifId = `upcoming-${task.id}-${dueStr}`;
+              if (!existingIds.has(notifId) && !dismissedSet.has(notifId)) {
+                const notif: AppNotification = {
+                  id: notifId,
+                  type: "upcoming",
+                  title: `Upcoming: ${task.title}`,
+                  message: `Due in ${diffDays} day${diffDays > 1 ? "s" : ""} on ${dueStr}.`,
+                  timestamp: Date.now(),
+                  read: false,
+                  taskId: task.id,
+                  boardId: task.boardId,
+                };
+                validNotifications.unshift(notif);
+                newlyCreated.push(notif);
+                existingIds.add(notifId);
+              }
+            }
+          }
+        }
+
+        // Trigger browser notification for newly generated items if enabled & permitted
+        if (
+          notificationSettings.browserNotifications &&
+          newlyCreated.length > 0 &&
+          typeof window !== "undefined" &&
+          "Notification" in window &&
+          Notification.permission === "granted"
+        ) {
+          for (const notif of newlyCreated.slice(0, 3)) {
+            try {
+              new Notification(notif.title, {
+                body: notif.message,
+                icon: "/favicon.ico",
+              });
+            } catch {
+              // ignore browser notification errors
+            }
+          }
+        }
+
+        set({ notifications: validNotifications });
+      },
     }),
     {
       name: STORAGE_KEY,
@@ -723,6 +998,9 @@ export const useTaskStore = create<TaskStore>()(
         accentColor: state.accentColor,
         density: state.density,
         language: state.language,
+        notificationSettings: state.notificationSettings,
+        notifications: state.notifications,
+        dismissedNotificationIds: state.dismissedNotificationIds,
       }),
     }
   )

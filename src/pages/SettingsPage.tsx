@@ -9,8 +9,10 @@ import {
   DialogContent,
   DialogTitle,
   Divider,
+  FormControlLabel,
   Paper,
   Stack,
+  Switch,
   ToggleButton,
   ToggleButtonGroup,
   Typography,
@@ -29,6 +31,11 @@ import FileDownloadIcon from "@mui/icons-material/FileDownloadOutlined";
 import FileUploadIcon from "@mui/icons-material/FileUploadOutlined";
 import TableChartIcon from "@mui/icons-material/TableChartOutlined";
 import DeleteForeverIcon from "@mui/icons-material/DeleteForeverOutlined";
+import NotificationsActiveOutlinedIcon from "@mui/icons-material/NotificationsActiveOutlined";
+import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
+import TodayRoundedIcon from "@mui/icons-material/TodayRounded";
+import ScheduleRoundedIcon from "@mui/icons-material/ScheduleRounded";
+import LanguageIcon from "@mui/icons-material/Language";
 import { useTranslation } from "react-i18next";
 import { useTaskStore } from "../store";
 import { ACCENT_COLORS } from "../lib/theme";
@@ -52,11 +59,47 @@ export default function SettingsPage() {
   const activeBoardId = useTaskStore((s) => s.activeBoardId);
   const importBoardAndTasks = useTaskStore((s) => s.importBoardAndTasks);
   const setToast = useTaskStore((s) => s.setToast);
+  const notificationSettings = useTaskStore((s) => s.notificationSettings);
+  const updateNotificationSettings = useTaskStore((s) => s.updateNotificationSettings);
 
   const [confirmClearOpen, setConfirmClearOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const activeBoard = boards.find((b) => b.id === activeBoardId) || boards[0];
+
+  const handleToggleBrowserNotifications = async (checked: boolean) => {
+    if (!checked) {
+      updateNotificationSettings({ browserNotifications: false });
+      return;
+    }
+
+    if (typeof window === "undefined" || !("Notification" in window)) {
+      setToast({ message: t("settings.browserNotSupported") });
+      return;
+    }
+
+    if (Notification.permission === "granted") {
+      updateNotificationSettings({ browserNotifications: true });
+      setToast({ message: "Browser notifications enabled!" });
+    } else if (Notification.permission === "denied") {
+      setToast({ message: t("settings.browserPermissionBlocked") });
+    } else {
+      try {
+        const permission = await Notification.requestPermission();
+        if (permission === "granted") {
+          updateNotificationSettings({ browserNotifications: true });
+          setToast({ message: "Browser notifications enabled!" });
+        } else {
+          updateNotificationSettings({ browserNotifications: false });
+          if (permission === "denied") {
+            setToast({ message: t("settings.browserPermissionBlocked") });
+          }
+        }
+      } catch (e) {
+        console.warn("TaskFlow: Error requesting notification permission", e);
+      }
+    }
+  };
 
   const handleLanguageChange = (_: React.MouseEvent<HTMLElement>, newLang: Language | null) => {
     if (newLang) {
@@ -253,6 +296,205 @@ export default function SettingsPage() {
                 <ViewCompactIcon fontSize="small" /> {t("settings.compact")}
               </ToggleButton>
             </ToggleButtonGroup>
+          </Stack>
+        </Card>
+
+        {/* Notifications & Reminders */}
+        <Card variant="outlined" sx={{ p: 3, borderRadius: 3 }}>
+          <Stack
+            direction={{ xs: "column", sm: "row" }}
+            alignItems={{ xs: "flex-start", sm: "center" }}
+            justifyContent="space-between"
+            spacing={2}
+            sx={{ mb: 2 }}
+          >
+            <Stack direction="row" spacing={2} alignItems="center">
+              <NotificationsActiveOutlinedIcon color="primary" />
+              <Box>
+                <Typography variant="subtitle1" fontWeight={700}>
+                  {t("settings.notificationsTitle")}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {t("settings.notificationsDesc")}
+                </Typography>
+              </Box>
+            </Stack>
+
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={notificationSettings.enabled}
+                  onChange={(e) => updateNotificationSettings({ enabled: e.target.checked })}
+                  color="primary"
+                  inputProps={{ "aria-label": t("settings.enableNotifications") }}
+                />
+              }
+              label={
+                <Typography variant="body2" fontWeight={600}>
+                  {notificationSettings.enabled ? t("common.active", "Active") : "Off"}
+                </Typography>
+              }
+              labelPlacement="start"
+              sx={{ m: 0 }}
+            />
+          </Stack>
+
+          <Divider sx={{ my: 2 }} />
+
+          <Stack
+            spacing={2.5}
+            sx={{
+              opacity: notificationSettings.enabled ? 1 : 0.45,
+              pointerEvents: notificationSettings.enabled ? "auto" : "none",
+              transition: "opacity 0.2s ease",
+            }}
+          >
+            {/* Overdue Task Alerts */}
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              alignItems={{ xs: "flex-start", sm: "center" }}
+              justifyContent="space-between"
+              spacing={2}
+            >
+              <Stack direction="row" spacing={2} alignItems="center">
+                <WarningAmberRoundedIcon sx={{ color: "error.main" }} />
+                <Box>
+                  <Typography variant="body2" fontWeight={600}>
+                    {t("settings.overdueAlerts")}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" display="block">
+                    {t("settings.overdueAlertsDesc")}
+                  </Typography>
+                </Box>
+              </Stack>
+              <Switch
+                size="small"
+                checked={notificationSettings.overdueAlerts}
+                onChange={(e) => updateNotificationSettings({ overdueAlerts: e.target.checked })}
+                color="error"
+                inputProps={{ "aria-label": t("settings.overdueAlerts") }}
+              />
+            </Stack>
+
+            {/* Due Today Alerts */}
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              alignItems={{ xs: "flex-start", sm: "center" }}
+              justifyContent="space-between"
+              spacing={2}
+            >
+              <Stack direction="row" spacing={2} alignItems="center">
+                <TodayRoundedIcon sx={{ color: "warning.main" }} />
+                <Box>
+                  <Typography variant="body2" fontWeight={600}>
+                    {t("settings.dueTodayAlerts")}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" display="block">
+                    {t("settings.dueTodayAlertsDesc")}
+                  </Typography>
+                </Box>
+              </Stack>
+              <Switch
+                size="small"
+                checked={notificationSettings.dueTodayAlerts}
+                onChange={(e) => updateNotificationSettings({ dueTodayAlerts: e.target.checked })}
+                color="warning"
+                inputProps={{ "aria-label": t("settings.dueTodayAlerts") }}
+              />
+            </Stack>
+
+            {/* Upcoming Deadline Alerts */}
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              alignItems={{ xs: "flex-start", sm: "center" }}
+              justifyContent="space-between"
+              spacing={2}
+            >
+              <Stack direction="row" spacing={2} alignItems="center">
+                <ScheduleRoundedIcon sx={{ color: "info.main" }} />
+                <Box>
+                  <Typography variant="body2" fontWeight={600}>
+                    {t("settings.upcomingAlerts")}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" display="block">
+                    {t("settings.upcomingAlertsDesc")}
+                  </Typography>
+                </Box>
+              </Stack>
+              <Switch
+                size="small"
+                checked={notificationSettings.upcomingAlerts}
+                onChange={(e) => updateNotificationSettings({ upcomingAlerts: e.target.checked })}
+                color="info"
+                inputProps={{ "aria-label": t("settings.upcomingAlerts") }}
+              />
+            </Stack>
+
+            {/* Upcoming Deadline Lead Days Selector */}
+            {notificationSettings.upcomingAlerts && (
+              <Stack
+                direction={{ xs: "column", sm: "row" }}
+                alignItems={{ xs: "flex-start", sm: "center" }}
+                justifyContent="space-between"
+                spacing={2}
+                sx={{ pl: { xs: 0, sm: 4.5 }, pt: 0.5 }}
+              >
+                <Box>
+                  <Typography variant="body2" fontWeight={600}>
+                    {t("settings.leadTime")}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" display="block">
+                    {t("settings.leadTimeDesc")}
+                  </Typography>
+                </Box>
+                <ToggleButtonGroup
+                  exclusive
+                  size="small"
+                  value={notificationSettings.upcomingLeadDays}
+                  onChange={(_, val: number | null) => val && updateNotificationSettings({ upcomingLeadDays: val })}
+                  aria-label={t("settings.leadTime")}
+                >
+                  <ToggleButton value={1} sx={{ px: 1.5, fontSize: 12, fontWeight: 600 }}>
+                    {t("settings.leadDays_1")}
+                  </ToggleButton>
+                  <ToggleButton value={2} sx={{ px: 1.5, fontSize: 12, fontWeight: 600 }}>
+                    {t("settings.leadDays_2")}
+                  </ToggleButton>
+                  <ToggleButton value={3} sx={{ px: 1.5, fontSize: 12, fontWeight: 600 }}>
+                    {t("settings.leadDays_3")}
+                  </ToggleButton>
+                </ToggleButtonGroup>
+              </Stack>
+            )}
+
+            <Divider sx={{ my: 1 }} />
+
+            {/* Browser Notifications Toggle */}
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              alignItems={{ xs: "flex-start", sm: "center" }}
+              justifyContent="space-between"
+              spacing={2}
+            >
+              <Stack direction="row" spacing={2} alignItems="center">
+                <LanguageIcon sx={{ color: "primary.main" }} />
+                <Box>
+                  <Typography variant="body2" fontWeight={600}>
+                    {t("settings.browserNotifications")}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" display="block">
+                    {t("settings.browserNotificationsDesc")}
+                  </Typography>
+                </Box>
+              </Stack>
+              <Switch
+                size="small"
+                checked={notificationSettings.browserNotifications}
+                onChange={(e) => void handleToggleBrowserNotifications(e.target.checked)}
+                color="primary"
+                inputProps={{ "aria-label": t("settings.browserNotifications") }}
+              />
+            </Stack>
           </Stack>
         </Card>
 

@@ -32,6 +32,7 @@ import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import LogoutIcon from "@mui/icons-material/Logout";
 import CloudDoneOutlinedIcon from "@mui/icons-material/CloudDoneOutlined";
 import CloudOffOutlinedIcon from "@mui/icons-material/CloudOffOutlined";
+import NotificationCenter from "./NotificationCenter";
 import { useTaskStore, clearInMemoryData } from "../store";
 import { useAuth } from "../hooks";
 
@@ -252,6 +253,8 @@ export default function Header({
             {mode === "dark" ? <LightModeIcon /> : <DarkModeIcon />}
           </IconButton>
         </Tooltip>
+
+        <NotificationCenter />
 
         <Button
           variant="contained"

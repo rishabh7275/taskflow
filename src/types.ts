@@ -24,6 +24,16 @@ export interface Board {
   createdAt: number;
 }
 
+export type RecurrenceFrequency = "none" | "daily" | "weekly" | "monthly";
+
+export interface RecurrenceConfig {
+  frequency: RecurrenceFrequency;
+  /** 0 = Sun, 1 = Mon, 2 = Tue, 3 = Wed, 4 = Thu, 5 = Fri, 6 = Sat */
+  weekdays?: number[];
+  /** Day of the month: 1..31 */
+  monthDay?: number;
+}
+
 export interface Task {
   id: string;
   boardId: string;
@@ -39,6 +49,45 @@ export interface Task {
   subtasks: Subtask[];
   estimatedTime?: string;
   notes?: string;
+  recurrence?: RecurrenceConfig | null;
+  recurringParentId?: string | null;
+  nextOccurrenceCreated?: boolean;
 }
 
-export type TaskInput = Omit<Task, "id" | "createdAt" | "boardId" | "completedAt">;
+export interface TaskInput {
+  title: string;
+  description: string;
+  status: Status;
+  priority: Priority;
+  /** ISO date (YYYY-MM-DD) or null */
+  dueDate: string | null;
+  labels: Label[];
+  subtasks: Subtask[];
+  estimatedTime?: string;
+  notes?: string;
+  recurrence?: RecurrenceConfig | null;
+  recurringParentId?: string | null;
+  nextOccurrenceCreated?: boolean;
+}
+
+export type NotificationType = "overdue" | "due_today" | "upcoming" | "system";
+
+export interface AppNotification {
+  id: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  timestamp: number;
+  read: boolean;
+  taskId?: string;
+  boardId?: string;
+}
+
+export interface NotificationSettings {
+  enabled: boolean;
+  overdueAlerts: boolean;
+  dueTodayAlerts: boolean;
+  upcomingAlerts: boolean;
+  upcomingLeadDays: number;
+  browserNotifications: boolean;
+}

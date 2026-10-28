@@ -13,6 +13,15 @@ const importSubtaskSchema = z.object({
   completed: z.boolean().default(false),
 });
 
+const importRecurrenceSchema = z
+  .object({
+    frequency: z.enum(["none", "daily", "weekly", "monthly"]),
+    weekdays: z.array(z.number()).optional(),
+    monthDay: z.number().optional(),
+  })
+  .nullable()
+  .optional();
+
 const importTaskSchema = z.object({
   id: z.string().default(() => crypto.randomUUID()),
   boardId: z.string().optional(),
@@ -26,6 +35,9 @@ const importTaskSchema = z.object({
   subtasks: z.array(importSubtaskSchema).default([]),
   estimatedTime: z.string().optional().default(""),
   notes: z.string().optional().default(""),
+  recurrence: importRecurrenceSchema.default(null),
+  recurringParentId: z.string().nullable().optional(),
+  nextOccurrenceCreated: z.boolean().optional().default(false),
 });
 
 const importBoardSchema = z.object({
@@ -107,6 +119,9 @@ export async function parseAndValidateImportJSON(
     subtasks: t.subtasks,
     estimatedTime: t.estimatedTime,
     notes: t.notes,
+    recurrence: t.recurrence,
+    recurringParentId: t.recurringParentId,
+    nextOccurrenceCreated: t.nextOccurrenceCreated,
   }));
 
   return { board, tasks };

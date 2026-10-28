@@ -16,9 +16,11 @@ import WarningAmberIcon from "@mui/icons-material/WarningAmberOutlined";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
+import RepeatIcon from "@mui/icons-material/Repeat";
 import type { Task } from "../types";
 import { formatDue, isOverdue, todayISO, PRIORITY_META } from "../utils";
 import { useTaskStore } from "../store";
+import { isRecurring, formatRecurrenceLabel } from "../lib/recurrence";
 
 interface Props {
   tasks: Task[];
@@ -202,6 +204,25 @@ export default function TodayWidget({ tasks, onEdit }: Props) {
                     variant="outlined"
                     sx={{ fontSize: 11, height: 22 }}
                   />
+
+                  {isRecurring(item) && (
+                    <Tooltip title={formatRecurrenceLabel(item.recurrence, t)} arrow>
+                      <Chip
+                        size="small"
+                        icon={<RepeatIcon sx={{ fontSize: "12px !important" }} />}
+                        label={
+                          item.recurrence?.frequency === "daily"
+                            ? t("recurrence.daily", "Daily")
+                            : item.recurrence?.frequency === "weekly"
+                            ? t("recurrence.weekly", "Weekly")
+                            : t("recurrence.monthly", "Monthly")
+                        }
+                        variant="outlined"
+                        color="primary"
+                        sx={{ fontSize: 10, height: 22, fontWeight: 600 }}
+                      />
+                    </Tooltip>
+                  )}
                 </Box>
               ))}
 
@@ -265,6 +286,25 @@ export default function TodayWidget({ tasks, onEdit }: Props) {
                     variant="outlined"
                     sx={{ fontSize: 11, height: 22 }}
                   />
+
+                  {isRecurring(item) && (
+                    <Tooltip title={formatRecurrenceLabel(item.recurrence, t)} arrow>
+                      <Chip
+                        size="small"
+                        icon={<RepeatIcon sx={{ fontSize: "12px !important" }} />}
+                        label={
+                          item.recurrence?.frequency === "daily"
+                            ? t("recurrence.daily", "Daily")
+                            : item.recurrence?.frequency === "weekly"
+                            ? t("recurrence.weekly", "Weekly")
+                            : t("recurrence.monthly", "Monthly")
+                        }
+                        variant="outlined"
+                        color="primary"
+                        sx={{ fontSize: 10, height: 22, fontWeight: 600 }}
+                      />
+                    </Tooltip>
+                  )}
                 </Box>
               ))}
             </Stack>

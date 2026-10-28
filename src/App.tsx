@@ -8,7 +8,7 @@ import PageSkeleton from "./components/PageSkeleton";
 import { createAppTheme } from "./lib/theme";
 import { useTaskStore } from "./store";
 import { AuthProvider } from "./context";
-import { useFirestoreSync, useAuth } from "./hooks";
+import { useFirestoreSync, useAuth, useTaskReminders } from "./hooks";
 import i18n from "./lib/i18n";
 
 const LoginPage = lazy(() => import("./pages/LoginPage"));
@@ -31,6 +31,8 @@ function RootRedirect() {
 function AppContent() {
   // Sync authenticated user workspace with Firestore and user-scoped storage
   useFirestoreSync();
+  // Automatically calculate deadline reminders and fire browser alerts if enabled
+  useTaskReminders();
 
   return (
     <BrowserRouter>

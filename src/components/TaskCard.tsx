@@ -30,11 +30,13 @@ import CheckBoxIcon from "@mui/icons-material/CheckBox";
 import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
+import RepeatIcon from "@mui/icons-material/Repeat";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { Status, Task } from "../types";
 import { PRIORITY_META, STATUSES, formatDue, isOverdue } from "../utils";
 import { useTaskStore } from "../store";
+import { isRecurring, formatRecurrenceLabel } from "../lib/recurrence";
 
 interface Props {
   task: Task;
@@ -352,6 +354,30 @@ export default function TaskCard({ task, onEdit, onDelete, onMove, isOverlay = f
               label={t("task.notes")}
               variant="outlined"
               sx={{ fontSize: 12 }}
+            />
+          </Tooltip>
+        )}
+        {isRecurring(task) && (
+          <Tooltip title={formatRecurrenceLabel(task.recurrence, t)} arrow>
+            <Chip
+              size="small"
+              icon={<RepeatIcon sx={{ fontSize: "14px !important" }} />}
+              label={
+                task.recurrence?.frequency === "daily"
+                  ? t("recurrence.daily", "Daily")
+                  : task.recurrence?.frequency === "weekly"
+                  ? t("recurrence.weekly", "Weekly")
+                  : t("recurrence.monthly", "Monthly")
+              }
+              variant="outlined"
+              color="primary"
+              sx={{
+                fontSize: 11,
+                fontWeight: 600,
+                height: 24,
+                bgcolor: (th) => alpha(th.palette.primary.main, 0.08),
+                borderColor: (th) => alpha(th.palette.primary.main, 0.3),
+              }}
             />
           </Tooltip>
         )}

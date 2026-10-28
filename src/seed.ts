@@ -76,6 +76,9 @@ export function createSeedTasks(): Task[] {
     subtasks,
     estimatedTime,
     notes,
+    recurrence: null,
+    recurringParentId: null,
+    nextOccurrenceCreated: false,
   });
 
   return [

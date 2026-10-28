@@ -15,6 +15,8 @@ import {
   MenuItem,
   Stack,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Typography,
   alpha,
 } from "@mui/material";
@@ -25,12 +27,23 @@ import CheckBoxIcon from "@mui/icons-material/CheckBox";
 import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import StickyNote2OutlinedIcon from "@mui/icons-material/StickyNote2Outlined";
+import RepeatIcon from "@mui/icons-material/Repeat";
 import { useForm, Controller, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import type { Label, Status, Task, TaskInput } from "../types";
+import type {
+  Label,
+  Priority,
+  RecurrenceConfig,
+  RecurrenceFrequency,
+  Status,
+  Subtask,
+  Task,
+  TaskInput,
+} from "../types";
 import { PRIORITIES, STATUSES } from "../utils";
 import { useTaskStore } from "../store";
+import { WEEKDAY_LABELS } from "../lib/recurrence";
 
 const createLabelSchema = (t: TFunction) =>
   z.object({
@@ -44,6 +57,13 @@ const createSubtaskSchema = (t: TFunction) =>
     id: z.string(),
     title: z.string().trim().min(1, t("validation.subtaskRequired")),
     completed: z.boolean(),
+  });
+
+const createRecurrenceSchema = () =>
+  z.object({
+    frequency: z.enum(["none", "daily", "weekly", "monthly"]),
+    weekdays: z.array(z.number()).optional(),
+    monthDay: z.number().min(1).max(31).optional(),
   });
 
 const createTaskFormSchema = (t: TFunction) =>
@@ -61,18 +81,20 @@ const createTaskFormSchema = (t: TFunction) =>
     notes: z.string().optional(),
     labels: z.array(createLabelSchema(t)).default([]),
     subtasks: z.array(createSubtaskSchema(t)).default([]),
+    recurrence: createRecurrenceSchema(),
   });
 
 type TaskFormData = {
   title: string;
   description: string;
-  status: "todo" | "doing" | "done";
-  priority: "low" | "medium" | "high";
+  status: Status;
+  priority: Priority;
   dueDate?: string | null;
   estimatedTime?: string;
   notes?: string;
   labels: Label[];
-  subtasks: { id: string; title: string; completed: boolean }[];
+  subtasks: Subtask[];
+  recurrence: RecurrenceConfig;
 };
 
 interface Props {
@@ -132,6 +154,11 @@ export default function TaskDialog({
       notes: "",
       labels: [],
       subtasks: [],
+      recurrence: {
+        frequency: "none",
+        weekdays: [],
+        monthDay: undefined,
+      },
     },
   });
 
@@ -141,6 +168,9 @@ export default function TaskDialog({
   });
 
   const selectedLabels = watch("labels");
+  const watchedRecurrence = watch("recurrence");
+  const frequency = watchedRecurrence?.frequency ?? "none";
+  const selectedWeekdays = watchedRecurrence?.weekdays ?? [];
 
   useEffect(() => {
     if (!open) return;
@@ -154,6 +184,11 @@ export default function TaskDialog({
       notes: task?.notes ?? "",
       labels: task?.labels ?? [],
       subtasks: task?.subtasks ?? [],
+      recurrence: task?.recurrence ?? {
+        frequency: "none",
+        weekdays: [],
+        monthDay: undefined,
+      },
     });
     setNewSubtaskTitle("");
     setShowNewLabelForm(false);
@@ -203,6 +238,24 @@ export default function TaskDialog({
   };
 
   const onSubmit = (data: TaskFormData) => {
+    const recurrence =
+      data.recurrence && data.recurrence.frequency !== "none"
+        ? {
+            frequency: data.recurrence.frequency,
+            weekdays:
+              data.recurrence.frequency === "weekly"
+                ? data.recurrence.weekdays && data.recurrence.weekdays.length > 0
+                  ? data.recurrence.weekdays
+                  : [data.dueDate ? new Date(`${data.dueDate}T00:00:00`).getDay() : new Date().getDay()]
+                : undefined,
+            monthDay:
+              data.recurrence.frequency === "monthly"
+                ? data.recurrence.monthDay ||
+                  (data.dueDate ? parseInt(data.dueDate.split("-")[2], 10) : new Date().getDate())
+                : undefined,
+          }
+        : null;
+
     onSave(
       {
         title: data.title.trim(),
@@ -214,6 +267,9 @@ export default function TaskDialog({
         notes: data.notes?.trim() || undefined,
         labels: data.labels ?? [],
         subtasks: data.subtasks ?? [],
+        recurrence,
+        recurringParentId: task?.recurringParentId ?? null,
+        nextOccurrenceCreated: recurrence ? (task?.nextOccurrenceCreated ?? false) : false,
       },
       task?.id
     );
@@ -344,6 +400,152 @@ export default function TaskDialog({
                   />
                 )}
               />
+            </Stack>
+
+            {/* Recurrence Settings */}
+            <Stack
+              spacing={1.5}
+              sx={{
+                p: 2,
+                borderRadius: 2.5,
+                bgcolor: (th) => alpha(th.palette.action.hover, 0.4),
+                border: 1,
+                borderColor: "divider",
+              }}
+            >
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <RepeatIcon fontSize="small" color={frequency !== "none" ? "primary" : "action"} />
+                <Typography variant="subtitle2" fontWeight={700}>
+                  {t("recurrence.label", "Recurrence")}
+                </Typography>
+              </Stack>
+
+              <Controller
+                name="recurrence.frequency"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    id="task-recurrence-frequency-select"
+                    name="recurrenceFrequency"
+                    select
+                    fullWidth
+                    size="small"
+                    label={t("recurrence.label", "Recurrence")}
+                    value={field.value || "none"}
+                    onChange={(e) => {
+                      const newFreq = e.target.value as RecurrenceFrequency;
+                      field.onChange(newFreq);
+                      if (
+                        newFreq === "weekly" &&
+                        (!watchedRecurrence?.weekdays || watchedRecurrence.weekdays.length === 0)
+                      ) {
+                        const currentDue = watch("dueDate");
+                        const defaultDay = currentDue
+                          ? new Date(`${currentDue}T00:00:00`).getDay()
+                          : new Date().getDay();
+                        setValue("recurrence.weekdays", [defaultDay]);
+                      } else if (newFreq === "monthly" && !watchedRecurrence?.monthDay) {
+                        const currentDue = watch("dueDate");
+                        const defaultDay = currentDue
+                          ? parseInt(currentDue.split("-")[2], 10)
+                          : new Date().getDate();
+                        setValue("recurrence.monthDay", defaultDay);
+                      }
+                    }}
+                    SelectProps={{
+                      id: "task-recurrence-frequency-select",
+                      inputProps: {
+                        id: "task-recurrence-frequency-select",
+                        name: "recurrenceFrequency",
+                      },
+                    }}
+                    InputLabelProps={{ htmlFor: "task-recurrence-frequency-select" }}
+                  >
+                    <MenuItem value="none">{t("recurrence.none", "Does not repeat")}</MenuItem>
+                    <MenuItem value="daily">{t("recurrence.daily", "Daily")}</MenuItem>
+                    <MenuItem value="weekly">{t("recurrence.weekly", "Weekly")}</MenuItem>
+                    <MenuItem value="monthly">{t("recurrence.monthly", "Monthly")}</MenuItem>
+                  </TextField>
+                )}
+              />
+
+              {/* Weekly weekday picker */}
+              {frequency === "weekly" && (
+                <Box sx={{ pt: 0.5 }}>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ display: "block", mb: 1, fontWeight: 600 }}
+                  >
+                    {t("recurrence.repeatOn", "Repeat on weekdays")}
+                  </Typography>
+                  <ToggleButtonGroup
+                    size="small"
+                    value={selectedWeekdays}
+                    onChange={(_, newDays: number[] | null) => {
+                      setValue("recurrence.weekdays", newDays || []);
+                    }}
+                    aria-label="Repeat weekdays"
+                    sx={{ display: "flex", flexWrap: "wrap", gap: 0.75 }}
+                  >
+                    {WEEKDAY_LABELS.map((w) => (
+                      <ToggleButton
+                        key={w.value}
+                        value={w.value}
+                        sx={{
+                          px: 1.5,
+                          py: 0.5,
+                          fontSize: 12,
+                          fontWeight: 700,
+                          borderRadius: "8px !important",
+                          border: 1,
+                          borderColor: "divider",
+                        }}
+                      >
+                        {w.label}
+                      </ToggleButton>
+                    ))}
+                  </ToggleButtonGroup>
+                </Box>
+              )}
+
+              {/* Monthly day picker */}
+              {frequency === "monthly" && (
+                <Box sx={{ pt: 0.5 }}>
+                  <TextField
+                    id="task-recurrence-monthday-input"
+                    name="monthDay"
+                    type="number"
+                    size="small"
+                    label={t("recurrence.dayOfMonth", "Day of the month (1–31)")}
+                    value={
+                      watchedRecurrence?.monthDay ??
+                      (watch("dueDate")
+                        ? parseInt(watch("dueDate")!.split("-")[2], 10)
+                        : new Date().getDate())
+                    }
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value, 10);
+                      if (!isNaN(val)) {
+                        setValue("recurrence.monthDay", Math.min(31, Math.max(1, val)));
+                      }
+                    }}
+                    inputProps={{
+                      min: 1,
+                      max: 31,
+                      id: "task-recurrence-monthday-input",
+                      name: "monthDay",
+                    }}
+                    InputLabelProps={{ htmlFor: "task-recurrence-monthday-input" }}
+                    helperText={t(
+                      "recurrence.monthlyClampNote",
+                      "Safely adjusts to the last day for shorter months (e.g. Feb 28, Apr 30)."
+                    )}
+                    fullWidth
+                  />
+                </Box>
+              )}
             </Stack>
 
             {/* Estimated time */}

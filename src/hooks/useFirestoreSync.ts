@@ -97,6 +97,7 @@ export function useFirestoreSync(): void {
             accentColor: data.accentColor,
             density: data.density,
             language: data.language,
+            notificationSettings: data.notificationSettings,
           };
 
           loadUserData(workspaceData);
@@ -118,6 +119,7 @@ export function useFirestoreSync(): void {
             accentColor: workspaceData.accentColor,
             density: workspaceData.density,
             language: workspaceData.language,
+            notificationSettings: workspaceData.notificationSettings,
           };
           lastSavedJsonRef.current = JSON.stringify(payload);
 
@@ -139,6 +141,7 @@ export function useFirestoreSync(): void {
             accentColor: state.accentColor,
             density: state.density,
             language: state.language,
+            notificationSettings: state.notificationSettings,
             updatedAt: Date.now(),
           };
 
@@ -163,6 +166,7 @@ export function useFirestoreSync(): void {
             accentColor: initialData.accentColor,
             density: initialData.density,
             language: initialData.language,
+            notificationSettings: initialData.notificationSettings,
           });
           setSyncStatus("saved");
         }
@@ -193,7 +197,8 @@ export function useFirestoreSync(): void {
         state.mode !== prevState.mode ||
         state.accentColor !== prevState.accentColor ||
         state.density !== prevState.density ||
-        state.language !== prevState.language;
+        state.language !== prevState.language ||
+        state.notificationSettings !== prevState.notificationSettings;
       if (!syncedChanged) return;
 
       const payload = {
@@ -206,6 +211,7 @@ export function useFirestoreSync(): void {
         accentColor: state.accentColor,
         density: state.density,
         language: state.language,
+        notificationSettings: state.notificationSettings,
       };
 
       const currentJson = JSON.stringify(payload);

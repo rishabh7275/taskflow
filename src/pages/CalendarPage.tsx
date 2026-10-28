@@ -32,10 +32,12 @@ import PlayCircleOutlineIcon from "@mui/icons-material/PlayCircleOutline";
 import FlagIcon from "@mui/icons-material/Flag";
 import EventBusyIcon from "@mui/icons-material/EventBusy";
 import ViewKanbanIcon from "@mui/icons-material/ViewKanbanOutlined";
+import RepeatIcon from "@mui/icons-material/Repeat";
 import { useTranslation } from "react-i18next";
 import { useTaskStore } from "../store";
 import type { Status, Task } from "../types";
 import { PRIORITY_META, STATUS_META, todayISO } from "../utils";
+import { isRecurring, formatRecurrenceLabel } from "../lib/recurrence";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const WEEKDAYS_SHORT = ["S", "M", "T", "W", "T", "F", "S"];
@@ -668,6 +670,20 @@ export default function CalendarPage() {
                                   {task.subtasks.filter((s) => s.completed).length}/{task.subtasks.length} subtasks
                                 </Typography>
                               )}
+                              {isRecurring(task) && (
+                                <Chip
+                                  size="small"
+                                  icon={<RepeatIcon sx={{ fontSize: "12px !important" }} />}
+                                  label={formatRecurrenceLabel(task.recurrence, t)}
+                                  sx={{
+                                    height: 18,
+                                    fontSize: 10,
+                                    bgcolor: alpha(theme.palette.primary.main, 0.25),
+                                    color: "primary.main",
+                                    fontWeight: 600,
+                                  }}
+                                />
+                              )}
                             </Stack>
                           </Box>
                         }
@@ -737,6 +753,18 @@ export default function CalendarPage() {
                           >
                             {task.title}
                           </Typography>
+                          {isRecurring(task) && (
+                            <Tooltip title={formatRecurrenceLabel(task.recurrence, t)}>
+                              <RepeatIcon
+                                sx={{
+                                  fontSize: 13,
+                                  color: "primary.main",
+                                  flexShrink: 0,
+                                  opacity: 0.9,
+                                }}
+                              />
+                            </Tooltip>
+                          )}
                         </Box>
                       </Tooltip>
                     );
@@ -859,13 +887,27 @@ export default function CalendarPage() {
                     <ListItemText
                       primary={task.title}
                       secondary={
-                        <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.25 }}>
+                        <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" sx={{ mt: 0.25 }}>
                           <Typography variant="caption" sx={{ color: priorityColor, fontWeight: 700 }}>
                             {PRIORITY_META[task.priority]?.label}
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
                             • {STATUS_META[task.status]?.label}
                           </Typography>
+                          {isRecurring(task) && (
+                            <Chip
+                              size="small"
+                              icon={<RepeatIcon sx={{ fontSize: "12px !important" }} />}
+                              label={formatRecurrenceLabel(task.recurrence, t)}
+                              sx={{
+                                height: 18,
+                                fontSize: 10,
+                                bgcolor: alpha(theme.palette.primary.main, 0.15),
+                                color: "primary.main",
+                                fontWeight: 600,
+                              }}
+                            />
+                          )}
                         </Stack>
                       }
                       primaryTypographyProps={{
